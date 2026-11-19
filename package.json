@@ -1,0 +1,25 @@
+{
+  "name": "tokyo-token-lab",
+  "version": "1.0.0",
+  "description": "Tokyo Token Lab — Complete Interactive AI Text Tokenizer, BPE Vocabulary Builder & 3D Embedding Explorer",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 4173",
+    "serve": "npx serve ."
+  },
+  "keywords": [
+    "tokenizer",
+    "ai",
+    "nlp",
+    "bpe",
+    "byte-pair-encoding",
+    "gpt-4",
+    "embeddings",
+    "pca",
+    "3d-visualization",
+    "plotly",
+    "tokyo-token-lab"
+  ],
+  "author": "Piyush Kori",
+  "license": "MIT"
+}

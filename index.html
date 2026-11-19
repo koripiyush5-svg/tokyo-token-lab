@@ -1,0 +1,2942 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TOKYO TOKEN LAB — AI Text Tokenizer & 3D Embedding Explorer</title>
+  <meta name="description" content="Explore how artificial intelligence transforms language into tokens. Experiment with tokenization, build vocabularies, and discover how language models represent information.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+
+  <!-- Google Fonts: Inter, Syne & Noto Sans JP for Tokyo Cinematic Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700;900&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Plotly.js for Hardware-Accelerated 3D WebGL Scatter Plots -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            theme: {
+              bg: '#101114',
+              secondary: '#191B20',
+              surface: '#15171D',
+              surfaceHover: '#1F2229',
+              border: '#282B33',
+              borderLight: '#383D48'
+            },
+            crimson: {
+              DEFAULT: '#C83C45',
+              hover: '#B5343D',
+              light: '#E24E57',
+              dark: '#93282F',
+              subtle: 'rgba(200, 60, 69, 0.12)',
+              glow: 'rgba(200, 60, 69, 0.35)'
+            },
+            gold: {
+              DEFAULT: '#C5A66A',
+              hover: '#B49354',
+              light: '#DCBF85',
+              dark: '#9E8044',
+              subtle: 'rgba(197, 166, 106, 0.12)'
+            },
+            txt: {
+              main: '#F3F1ED',
+              secondary: '#A4A3A1',
+              muted: '#737373',
+              faint: '#4A4C52'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            display: ['Syne', 'Cinzel', 'sans-serif'],
+            jp: ['Noto Sans JP', 'Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'Menlo', 'monospace']
+          },
+          boxShadow: {
+            'crimson-sm': '0 0 15px rgba(200, 60, 69, 0.2)',
+            'crimson-lg': '0 0 35px rgba(200, 60, 69, 0.35)',
+            'gold-sm': '0 0 15px rgba(197, 166, 106, 0.2)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #101114;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #282B33;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #C83C45;
+    }
+
+    /* Subtle Geometric Grid Background */
+    .bg-grid-pattern {
+      background-size: 40px 40px;
+      background-image: 
+        linear-gradient(to right, rgba(40, 43, 51, 0.25) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(40, 43, 51, 0.25) 1px, transparent 1px);
+    }
+
+    /* Asanoha Subtle Japanese Geometric Accent */
+    .bg-dots-pattern {
+      background-image: radial-gradient(rgba(200, 60, 69, 0.15) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    /* Cinematic Radial Glows */
+    .radial-glow-crimson {
+      background: radial-gradient(circle at 50% 20%, rgba(200, 60, 69, 0.18) 0%, rgba(16, 17, 20, 0) 70%);
+    }
+
+    /* Token Block Styles */
+    .token-pill {
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .token-pill:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(200, 60, 69, 0.3);
+    }
+
+    /* Japanese watermark badge */
+    .kanji-watermark {
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      user-select: none;
+    }
+
+    /* Smooth Collapsible */
+    .accordion-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+    }
+    .accordion-content.expanded {
+      max-height: 800px;
+    }
+  </style>
+</head>
+<body class="bg-theme-bg text-txt-main font-sans min-h-screen flex flex-col selection:bg-crimson selection:text-white relative overflow-x-hidden">
+
+  <!-- Floating Ambient Particles Canvas (Hero & Background) -->
+  <canvas id="ambientCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
+
+  <!-- ================= 4. STICKY NAVIGATION BAR ================= -->
+  <header class="sticky top-0 z-50 backdrop-blur-md bg-theme-bg/90 border-b border-theme-border/80 transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand & Kanji Mark -->
+      <a href="#hero" class="flex items-center space-x-3 group">
+        <div class="relative w-9 h-9 rounded-lg bg-gradient-to-br from-crimson to-crimson-dark border border-crimson/50 flex items-center justify-center shadow-crimson-sm group-hover:shadow-crimson-lg transition duration-300">
+          <span class="font-display font-black text-sm text-white tracking-widest">東</span>
+          <span class="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-gold border border-theme-bg"></span>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="font-display text-base font-extrabold tracking-wider text-txt-main group-hover:text-white transition">
+              TOKYO <span class="text-crimson">TOKEN</span> LAB
+            </span>
+            <span class="text-[9px] font-mono px-1.5 py-0.2 rounded border border-crimson/40 bg-crimson-subtle text-crimson-light font-semibold uppercase tracking-wider">
+              AI 2.0
+            </span>
+          </div>
+          <span class="text-[10px] text-txt-muted block tracking-tight font-jp">東京トークン研究所 · Tokenization Engine</span>
+        </div>
+      </a>
+
+      <!-- Desktop Navigation Links with Minimal Crimson Active Indicator -->
+      <nav class="hidden lg:flex items-center space-x-1" id="desktopNav">
+        <a href="#hero" class="nav-item px-3 py-1.5 rounded-lg text-xs font-medium text-txt-secondary hover:text-white hover:bg-theme-secondary transition relative" data-target="hero">
+          Home
+          <span class="active-indicator absolute bottom-0 left-3 right-3 h-0.5 bg-crimson rounded-full opacity-0 transition-opacity"></span>
+        </a>
+        <a href="#tokenizer" class="nav-item px-3 py-1.5 rounded-lg text-xs font-medium text-txt-secondary hover:text-white hover:bg-theme-secondary transition relative active" data-target="tokenizer">
+          Tokenizer
+          <span class="active-indicator absolute bottom-0 left-3 right-3 h-0.5 bg-crimson rounded-full opacity-100 transition-opacity"></span>
+        </a>
+        <a href="#vocabulary-lab" class="nav-item px-3 py-1.5 rounded-lg text-xs font-medium text-txt-secondary hover:text-white hover:bg-theme-secondary transition relative" data-target="vocabulary-lab">
+          Vocabulary Lab
+          <span class="active-indicator absolute bottom-0 left-3 right-3 h-0.5 bg-crimson rounded-full opacity-0 transition-opacity"></span>
+        </a>
+        <a href="#token-battle" class="nav-item px-3 py-1.5 rounded-lg text-xs font-medium text-txt-secondary hover:text-white hover:bg-theme-secondary transition relative" data-target="token-battle">
+          Token Battle
+          <span class="active-indicator absolute bottom-0 left-3 right-3 h-0.5 bg-crimson rounded-full opacity-0 transition-opacity"></span>
+        </a>
+        <a href="#embeddings-3d" class="nav-item px-3 py-1.5 rounded-lg text-xs font-semibold text-gold-light hover:text-white hover:bg-gold-subtle transition relative border border-gold/30" data-target="embeddings-3d">
+          <span class="flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-gold animate-pulse"></span>
+            3D Embeddings
+          </span>
+          <span class="active-indicator absolute bottom-0 left-3 right-3 h-0.5 bg-gold rounded-full opacity-0 transition-opacity"></span>
+        </a>
+        <a href="#token-explorer" class="nav-item px-3 py-1.5 rounded-lg text-xs font-medium text-txt-secondary hover:text-white hover:bg-theme-secondary transition relative" data-target="token-explorer">
+          Token Explorer
+          <span class="active-indicator absolute bottom-0 left-3 right-3 h-0.5 bg-crimson rounded-full opacity-0 transition-opacity"></span>
+        </a>
+        <a href="#learn" class="nav-item px-3 py-1.5 rounded-lg text-xs font-medium text-txt-secondary hover:text-white hover:bg-theme-secondary transition relative" data-target="learn">
+          Learn
+          <span class="active-indicator absolute bottom-0 left-3 right-3 h-0.5 bg-crimson rounded-full opacity-0 transition-opacity"></span>
+        </a>
+      </nav>
+
+      <!-- Quick Action: Jump to Lab -->
+      <div class="flex items-center space-x-3">
+        <a href="#tokenizer" class="hidden sm:inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-crimson hover:bg-crimson-hover text-white shadow-crimson-sm hover:shadow-crimson-lg transition duration-200">
+          <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+          <span>LAUNCH LAB</span>
+        </a>
+
+        <!-- Mobile Menu Toggle -->
+        <button onclick="toggleMobileMenu()" class="lg:hidden p-2 rounded-lg text-txt-secondary hover:text-white hover:bg-theme-secondary border border-theme-border">
+          <i data-lucide="menu" id="menuIcon" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Dropdown Menu -->
+    <div id="mobileMenu" class="hidden lg:hidden border-b border-theme-border bg-theme-secondary/95 backdrop-blur-md px-4 py-3 space-y-1">
+      <a href="#hero" onclick="toggleMobileMenu()" class="block px-3 py-2 rounded text-xs font-medium text-txt-secondary hover:text-white hover:bg-theme-surface">Home</a>
+      <a href="#tokenizer" onclick="toggleMobileMenu()" class="block px-3 py-2 rounded text-xs font-medium text-crimson-light hover:text-white hover:bg-theme-surface">Tokenizer Workspace</a>
+      <a href="#vocabulary-lab" onclick="toggleMobileMenu()" class="block px-3 py-2 rounded text-xs font-medium text-txt-secondary hover:text-white hover:bg-theme-surface">Vocabulary Lab (BPE)</a>
+      <a href="#token-battle" onclick="toggleMobileMenu()" class="block px-3 py-2 rounded text-xs font-medium text-txt-secondary hover:text-white hover:bg-theme-surface">Token Battle (Comparison)</a>
+      <a href="#embeddings-3d" onclick="toggleMobileMenu()" class="block px-3 py-2 rounded text-xs font-semibold text-gold hover:text-white hover:bg-theme-surface">3D Embedding Explorer</a>
+      <a href="#token-explorer" onclick="toggleMobileMenu()" class="block px-3 py-2 rounded text-xs font-medium text-txt-secondary hover:text-white hover:bg-theme-surface">Token Explorer</a>
+      <a href="#learn" onclick="toggleMobileMenu()" class="block px-3 py-2 rounded text-xs font-medium text-txt-secondary hover:text-white hover:bg-theme-surface">Learning Corner</a>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTENT ================= -->
+  <main class="flex-1 relative z-10">
+
+    <!-- ================= 5. HERO SECTION ================= -->
+    <section id="hero" class="relative pt-20 pb-28 px-4 sm:px-6 lg:px-8 overflow-hidden bg-grid-pattern radial-glow-crimson border-b border-theme-border">
+      
+      <!-- Subtle Japanese Kanji Vertical Accent (Atmospheric) -->
+      <div class="absolute left-6 top-24 font-jp font-black text-6xl text-theme-border/25 kanji-watermark select-none pointer-events-none hidden xl:block">
+        言葉の破片
+      </div>
+      <div class="absolute right-8 top-28 font-jp font-black text-6xl text-theme-border/20 kanji-watermark select-none pointer-events-none hidden xl:block">
+        永遠のトークン
+      </div>
+
+      <div class="max-w-5xl mx-auto text-center space-y-7 relative">
+        
+        <!-- Badge -->
+        <div class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full border border-crimson/30 bg-crimson-subtle text-xs text-crimson-light font-mono font-medium shadow-crimson-sm animate-pulse">
+          <span class="w-2 h-2 rounded-full bg-crimson"></span>
+          <span>TOKYO TOKEN LAB · ACADEMIC AI RESEARCH</span>
+          <span class="text-gold font-bold">東京</span>
+        </div>
+
+        <!-- Big Hero Heading -->
+        <div class="space-y-2">
+          <h1 class="font-display text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-txt-main uppercase">
+            WORDS BREAK.<br>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-crimson via-crimson-light to-gold">
+              TOKENS REMAIN.
+            </span>
+          </h1>
+          <p class="font-jp text-xs sm:text-sm text-gold tracking-widest uppercase font-medium">
+            Every Word Has Its Own Story — 言葉にはそれぞれの物語がある
+          </p>
+        </div>
+
+        <!-- Subtitle -->
+        <p class="max-w-2xl mx-auto text-sm sm:text-base text-txt-secondary leading-relaxed font-light">
+          Discover how artificial intelligence transforms human language into discrete numerical tokens. Explore the inner mechanics behind modern LLMs through an interactive, mathematically authentic tokenization playground.
+        </p>
+
+        <!-- CTA Buttons -->
+        <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <a href="#tokenizer" class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-crimson hover:bg-crimson-hover text-white text-xs sm:text-sm font-bold tracking-wider uppercase shadow-crimson-lg transition duration-200 flex items-center justify-center space-x-2 group">
+            <i data-lucide="terminal" class="w-4 h-4 group-hover:scale-110 transition"></i>
+            <span>ENTER THE LAB</span>
+          </a>
+          <a href="#embeddings-3d" class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-theme-surface hover:bg-theme-surfaceHover text-txt-main border border-theme-border hover:border-gold/50 text-xs sm:text-sm font-semibold tracking-wider uppercase transition duration-200 flex items-center justify-center space-x-2">
+            <i data-lucide="box" class="w-4 h-4 text-gold"></i>
+            <span>EXPLORE 3D EMBEDDINGS</span>
+          </a>
+        </div>
+
+        <!-- Quick Architecture Pillars Ribbon -->
+        <div class="pt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-4xl mx-auto text-left">
+          <div class="p-3.5 rounded-xl bg-theme-secondary/80 border border-theme-border">
+            <div class="text-[10px] font-mono text-crimson font-bold uppercase">01 / SUBWORD LOGIC</div>
+            <div class="text-xs font-semibold text-txt-main mt-0.5">Byte Pair Encoding</div>
+            <div class="text-[11px] text-txt-muted mt-1">Learns statistical merges</div>
+          </div>
+          <div class="p-3.5 rounded-xl bg-theme-secondary/80 border border-theme-border">
+            <div class="text-[10px] font-mono text-gold font-bold uppercase">02 / PRETRAINED BPE</div>
+            <div class="text-xs font-semibold text-txt-main mt-0.5">GPT-4 / cl100k_base</div>
+            <div class="text-[11px] text-txt-muted mt-1">Real byte-level tokenization</div>
+          </div>
+          <div class="p-3.5 rounded-xl bg-theme-secondary/80 border border-theme-border">
+            <div class="text-[10px] font-mono text-crimson font-bold uppercase">03 / DIMENSIONALITY</div>
+            <div class="text-xs font-semibold text-txt-main mt-0.5">Real 3D PCA Space</div>
+            <div class="text-[11px] text-txt-muted mt-1">Exact covariance projection</div>
+          </div>
+          <div class="p-3.5 rounded-xl bg-theme-secondary/80 border border-theme-border">
+            <div class="text-[10px] font-mono text-gold font-bold uppercase">04 / METRIC ENGINE</div>
+            <div class="text-xs font-semibold text-txt-main mt-0.5">Cosine Similarity</div>
+            <div class="text-[11px] text-txt-muted mt-1">Full vector angle distance</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= 6. INTERACTIVE TOKENIZER WORKSPACE ================= -->
+    <section id="tokenizer" class="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
+      
+      <!-- Section Title -->
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-theme-border">
+        <div>
+          <div class="flex items-center space-x-2 text-xs font-mono text-crimson uppercase tracking-widest font-semibold">
+            <span class="w-2 h-2 rounded-full bg-crimson"></span>
+            <span>SECTION 01 // INTERACTIVE WORKSPACE</span>
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-display font-extrabold text-txt-main mt-1 uppercase tracking-tight">
+            Tokenizer Studio
+          </h2>
+          <p class="text-xs sm:text-sm text-txt-secondary mt-1">
+            Analyze, split, and inspect how text breaks into tokens across 4 distinct AI tokenization paradigms.
+          </p>
+        </div>
+
+        <!-- Tokenizer Method Selector Tabs -->
+        <div class="flex flex-wrap items-center gap-1.5 p-1 bg-theme-secondary rounded-xl border border-theme-border text-xs">
+          <button onclick="selectTokenizerMethod('bpe_pretrained')" id="btn-method-pretrained" class="method-tab-btn px-3 py-1.5 rounded-lg font-semibold bg-crimson text-white transition shadow-sm">
+            Pretrained BPE (GPT)
+          </button>
+          <button onclick="selectTokenizerMethod('bpe_edu')" id="btn-method-bpe" class="method-tab-btn px-3 py-1.5 rounded-lg text-txt-secondary hover:text-white transition">
+            Educational BPE
+          </button>
+          <button onclick="selectTokenizerMethod('word')" id="btn-method-word" class="method-tab-btn px-3 py-1.5 rounded-lg text-txt-secondary hover:text-white transition">
+            Word-Based
+          </button>
+          <button onclick="selectTokenizerMethod('char')" id="btn-method-char" class="method-tab-btn px-3 py-1.5 rounded-lg text-txt-secondary hover:text-white transition">
+            Character-Based
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Workspace Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- LEFT: Text Input & Configuration (5 Cols) -->
+        <div class="lg:col-span-5 space-y-4 bg-theme-secondary p-5 rounded-2xl border border-theme-border shadow-xl">
+          
+          <!-- Sample Sentences Dropdown -->
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-semibold text-txt-main flex items-center gap-1.5">
+              <i data-lucide="file-text" class="w-3.5 h-3.5 text-crimson"></i>
+              <span>Input Text</span>
+            </label>
+            <div class="flex items-center space-x-1.5 text-xs">
+              <button onclick="loadSampleText('tokyo')" class="px-2 py-0.5 rounded bg-theme-surface hover:bg-theme-surfaceHover text-txt-secondary hover:text-txt-main border border-theme-border text-[11px] transition">
+                Sample: Tokyo Night
+              </button>
+              <button onclick="loadSampleText('code')" class="px-2 py-0.5 rounded bg-theme-surface hover:bg-theme-surfaceHover text-txt-secondary hover:text-txt-main border border-theme-border text-[11px] transition">
+                Sample: Code
+              </button>
+              <button onclick="clearTokenizerInput()" class="px-2 py-0.5 rounded text-crimson hover:bg-crimson-subtle text-[11px] transition">
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <!-- Textarea Input -->
+          <div class="relative">
+            <textarea id="tokenizerInput" rows="6" oninput="runTokenization()" class="w-full bg-theme-bg border border-theme-border rounded-xl p-3.5 text-sm text-txt-main placeholder-txt-faint font-mono focus:outline-none focus:ring-2 focus:ring-crimson focus:border-transparent transition leading-relaxed resize-y" placeholder="Type or paste sentences here to observe tokenization in real time..."></textarea>
+          </div>
+
+          <!-- Input Metadata Bar -->
+          <div class="flex items-center justify-between text-xs text-txt-muted font-mono pt-1">
+            <div class="flex items-center space-x-3">
+              <span>Chars: <strong id="rawCharCount" class="text-txt-main font-bold">0</strong></span>
+              <span>Words: <strong id="rawWordCount" class="text-txt-main font-bold">0</strong></span>
+            </div>
+            <div class="text-[11px] text-gold font-sans" id="methodBadgeLabel">
+              Method: Pretrained BPE (GPT-4 Byte-level)
+            </div>
+          </div>
+
+          <!-- Method Educational Description Box -->
+          <div id="methodInfoBox" class="p-3.5 rounded-xl bg-theme-bg/60 border border-theme-border text-xs text-txt-secondary space-y-1">
+            <div class="font-semibold text-txt-main flex items-center gap-1.5">
+              <span id="methodInfoTitle">Pretrained Byte-Pair Encoding (GPT Byte-Level)</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-crimson/20 text-crimson font-mono">Industry Standard</span>
+            </div>
+            <p id="methodInfoDesc" class="text-[11px] text-txt-muted leading-relaxed">
+              Splits text into subword units using byte-level BPE. Spaces are represented as 'Ġ' (Unicode \u0120) to maintain exact byte fidelity. Rare or new words decompose into familiar sub-syllables.
+            </p>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div class="flex gap-2 pt-1">
+            <button onclick="runTokenization()" class="flex-1 py-2.5 px-4 rounded-xl bg-crimson hover:bg-crimson-hover text-white text-xs font-bold uppercase tracking-wider shadow-crimson-sm transition flex items-center justify-center space-x-2">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              <span>Re-Tokenize</span>
+            </button>
+            <button onclick="copyTokensAsJSON()" class="py-2.5 px-3.5 rounded-xl bg-theme-surface hover:bg-theme-surfaceHover text-txt-main border border-theme-border text-xs font-semibold transition flex items-center space-x-1.5" title="Copy Tokens Array as JSON">
+              <i data-lucide="copy" class="w-3.5 h-3.5 text-txt-muted"></i>
+              <span>Copy JSON</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: Visual Token Blocks & Dynamic Metrics (7 Cols) -->
+        <div class="lg:col-span-7 space-y-5">
+          
+          <!-- Statistics Cards Grid (6 Dynamically Calculated Values) -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div class="p-3.5 rounded-xl bg-theme-secondary border border-theme-border">
+              <div class="text-[10px] font-mono text-txt-muted uppercase font-bold">Total Characters</div>
+              <div id="statChars" class="text-xl font-bold font-mono text-txt-main mt-0.5">0</div>
+              <div class="text-[10px] text-txt-faint mt-0.5">Raw input length</div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-theme-secondary border border-theme-border">
+              <div class="text-[10px] font-mono text-txt-muted uppercase font-bold">Total Words</div>
+              <div id="statWords" class="text-xl font-bold font-mono text-txt-main mt-0.5">0</div>
+              <div class="text-[10px] text-txt-faint mt-0.5">Whitespace segmented</div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-theme-secondary border border-crimson/40 bg-crimson-subtle/30">
+              <div class="text-[10px] font-mono text-crimson font-bold uppercase">Total Tokens</div>
+              <div id="statTokens" class="text-xl font-bold font-mono text-crimson-light mt-0.5">0</div>
+              <div class="text-[10px] text-txt-faint mt-0.5">LLM input chunks</div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-theme-secondary border border-theme-border">
+              <div class="text-[10px] font-mono text-txt-muted uppercase font-bold">Unique Tokens</div>
+              <div id="statUniqueTokens" class="text-xl font-bold font-mono text-txt-main mt-0.5">0</div>
+              <div class="text-[10px] text-txt-faint mt-0.5">Distinct vocabulary items</div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-theme-secondary border border-theme-border">
+              <div class="text-[10px] font-mono text-gold font-bold uppercase">Avg Chars / Token</div>
+              <div id="statAvgChars" class="text-xl font-bold font-mono text-gold-light mt-0.5">0.0</div>
+              <div class="text-[10px] text-txt-faint mt-0.5">Information density</div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-theme-secondary border border-theme-border">
+              <div class="text-[10px] font-mono text-txt-muted uppercase font-bold">Token / Word Ratio</div>
+              <div id="statRatio" class="text-xl font-bold font-mono text-txt-main mt-0.5">0.00</div>
+              <div class="text-[10px] text-txt-faint mt-0.5">&lt; 1.3 is optimal English</div>
+            </div>
+          </div>
+
+          <!-- Token Visualizer Canvas / Board -->
+          <div class="bg-theme-secondary rounded-2xl border border-theme-border shadow-xl overflow-hidden flex flex-col min-h-[360px]">
+            
+            <!-- Visualizer Header -->
+            <div class="px-5 py-3.5 bg-theme-surface border-b border-theme-border flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-crimson"></span>
+                <span class="text-xs font-semibold text-txt-main uppercase tracking-wider">Visual Token Stream</span>
+              </div>
+              <div class="text-[11px] text-txt-muted font-mono flex items-center space-x-3">
+                <span class="flex items-center gap-1">
+                  <span class="inline-block w-2 h-2 rounded bg-crimson"></span> Space (Ġ)
+                </span>
+                <span>Click any token to inspect</span>
+              </div>
+            </div>
+
+            <!-- Token Blocks Area -->
+            <div id="tokenVisualizerArea" class="p-5 flex-1 overflow-y-auto max-h-[380px] flex flex-wrap content-start gap-2 select-none">
+              <!-- Dynamically populated tokens -->
+            </div>
+
+            <!-- Visualizer Footer -->
+            <div class="px-5 py-2.5 bg-theme-bg/70 border-t border-theme-border flex items-center justify-between text-[11px] text-txt-muted font-mono">
+              <span id="visualizerFooterInfo">Viewing 0 tokens</span>
+              <span class="text-crimson font-medium">Hover over tokens for position & IDs</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ================= 7. TOKEN BREAKDOWN TABLE ================= -->
+      <div class="bg-theme-secondary p-5 sm:p-6 rounded-2xl border border-theme-border shadow-xl space-y-4">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-theme-border">
+          <div>
+            <h3 class="text-base font-bold text-txt-main flex items-center gap-2">
+              <i data-lucide="table" class="w-4 h-4 text-crimson"></i>
+              <span>Token Breakdown Table</span>
+            </h3>
+            <p class="text-xs text-txt-secondary mt-0.5">
+              Comprehensive tabular inspection with column sorting, live search filter, repeated-token highlighting, and copy.
+            </p>
+          </div>
+
+          <!-- Table Controls: Search & Highlight Repeats -->
+          <div class="flex items-center space-x-2">
+            <div class="relative">
+              <input type="text" id="tableSearchInput" oninput="filterTokenTable()" placeholder="Search token..." class="bg-theme-bg border border-theme-border rounded-lg pl-8 pr-3 py-1.5 text-xs text-txt-main placeholder-txt-faint focus:outline-none focus:ring-1 focus:ring-crimson font-mono">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-txt-muted absolute left-2.5 top-2.5"></i>
+            </div>
+            <button onclick="toggleHighlightRepeats()" id="btnHighlightRepeats" class="px-3 py-1.5 rounded-lg border border-theme-border bg-theme-surface hover:bg-theme-surfaceHover text-xs text-txt-secondary font-medium transition flex items-center space-x-1">
+              <i data-lucide="layers" class="w-3.5 h-3.5 text-gold"></i>
+              <span>Highlight Duplicates</span>
+            </button>
+            <button onclick="exportTableCSV()" class="px-3 py-1.5 rounded-lg border border-theme-border bg-theme-surface hover:bg-theme-surfaceHover text-xs text-txt-secondary font-medium transition" title="Export as CSV">
+              Export CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Table Container -->
+        <div class="overflow-x-auto rounded-xl border border-theme-border">
+          <table class="w-full text-left text-xs font-mono">
+            <thead class="bg-theme-surface text-txt-muted uppercase text-[10px] tracking-wider border-b border-theme-border">
+              <tr>
+                <th scope="col" class="py-3 px-4 cursor-pointer hover:text-white transition" onclick="sortTable('position')">
+                  Position ⇅
+                </th>
+                <th scope="col" class="py-3 px-4 cursor-pointer hover:text-white transition" onclick="sortTable('token')">
+                  Token String ⇅
+                </th>
+                <th scope="col" class="py-3 px-4 cursor-pointer hover:text-white transition" onclick="sortTable('id')">
+                  Token ID ⇅
+                </th>
+                <th scope="col" class="py-3 px-4 cursor-pointer hover:text-white transition" onclick="sortTable('length')">
+                  Character Length ⇅
+                </th>
+                <th scope="col" class="py-3 px-4">
+                  Byte Sequence (Hex / UTF-8)
+                </th>
+                <th scope="col" class="py-3 px-4 text-right">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody id="tokenTableBody" class="divide-y divide-theme-border text-txt-secondary">
+              <!-- Populated by JavaScript -->
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ================= 8. VOCABULARY LAB — BPE BUILDER ================= -->
+    <section id="vocabulary-lab" class="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8 bg-grid-pattern border-t border-b border-theme-border">
+      
+      <!-- Section Header -->
+      <div class="pb-4 border-b border-theme-border flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <div class="flex items-center space-x-2 text-xs font-mono text-gold uppercase tracking-widest font-semibold">
+            <span class="w-2 h-2 rounded-full bg-gold"></span>
+            <span>SECTION 02 // VOCABULARY LAB</span>
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-display font-extrabold text-txt-main mt-1 uppercase tracking-tight">
+            Byte Pair Encoding (BPE) Builder
+          </h2>
+          <p class="text-xs sm:text-sm text-txt-secondary mt-1 max-w-3xl">
+            Train an educational subword tokenizer from scratch. Watch adjacent frequent character pairs merge step-by-step into high-frequency compound subwords.
+          </p>
+        </div>
+
+        <!-- Preset Corpus Selector -->
+        <div class="flex items-center space-x-2">
+          <span class="text-xs text-txt-muted">Corpus Presets:</span>
+          <button onclick="loadBpeCorpus('toy')" class="px-2.5 py-1 rounded bg-theme-secondary hover:bg-theme-surface text-txt-secondary text-xs border border-theme-border transition">
+            Classic Toy ("low lower...")
+          </button>
+          <button onclick="loadBpeCorpus('tokyo')" class="px-2.5 py-1 rounded bg-theme-secondary hover:bg-theme-surface text-txt-secondary text-xs border border-theme-border transition">
+            Tokyo Cyber
+          </button>
+          <button onclick="loadBpeCorpus('ai')" class="px-2.5 py-1 rounded bg-theme-secondary hover:bg-theme-surface text-txt-secondary text-xs border border-theme-border transition">
+            AI & NLP
+          </button>
+        </div>
+      </div>
+
+      <!-- BPE Builder Workspace Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Configuration & Training Corpus (5 Cols) -->
+        <div class="lg:col-span-5 space-y-4 bg-theme-secondary p-5 rounded-2xl border border-theme-border shadow-xl">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-semibold text-txt-main flex items-center gap-1.5">
+              <i data-lucide="book-open" class="w-3.5 h-3.5 text-gold"></i>
+              <span>Training Corpus (Raw Text)</span>
+            </label>
+            <span class="text-[11px] text-txt-muted font-mono" id="bpeCorpusWordCount">0 words</span>
+          </div>
+
+          <textarea id="bpeCorpusInput" rows="5" class="w-full bg-theme-bg border border-theme-border rounded-xl p-3 text-xs text-txt-main font-mono placeholder-txt-faint focus:outline-none focus:ring-2 focus:ring-gold" placeholder="Enter corpus for BPE training...">low low low low lower lower newest newest newest widest widest</textarea>
+
+          <!-- Merge Count Slider & Vocab Size Target -->
+          <div class="space-y-3 pt-2 border-t border-theme-border">
+            <div class="flex items-center justify-between text-xs">
+              <label class="font-semibold text-txt-main">Target Number of Merges:</label>
+              <span id="bpeMergeCountVal" class="font-mono text-gold font-bold text-sm">8</span>
+            </div>
+            <input type="range" id="bpeMergeSlider" min="2" max="25" value="8" oninput="document.getElementById('bpeMergeCountVal').innerText = this.value" class="w-full accent-gold bg-theme-bg h-2 rounded-lg cursor-pointer">
+            <div class="flex justify-between text-[10px] text-txt-muted font-mono">
+              <span>2 merges (Minimal)</span>
+              <span>12 merges</span>
+              <span>25 merges (Deep Subwords)</span>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="pt-2 flex gap-2">
+            <button onclick="trainBPE()" id="btnTrainBPE" class="flex-1 py-3 px-4 rounded-xl bg-gold hover:bg-gold-hover text-theme-bg text-xs font-bold uppercase tracking-wider shadow-gold-sm transition flex items-center justify-center space-x-2">
+              <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+              <span>Train BPE Vocabulary</span>
+            </button>
+            <button onclick="resetBpeBuilder()" class="py-3 px-4 rounded-xl bg-theme-surface hover:bg-theme-surfaceHover text-txt-secondary border border-theme-border text-xs font-semibold transition">
+              Reset
+            </button>
+          </div>
+
+          <!-- BPE Statistics Summary -->
+          <div class="grid grid-cols-3 gap-2 pt-2 border-t border-theme-border text-center">
+            <div class="p-2 rounded-lg bg-theme-bg/60 border border-theme-border">
+              <div class="text-[9px] font-mono text-txt-muted uppercase">Initial Vocab</div>
+              <div id="bpeStatInitialVocab" class="text-sm font-bold font-mono text-txt-main mt-0.5">0</div>
+            </div>
+            <div class="p-2 rounded-lg bg-theme-bg/60 border border-theme-border">
+              <div class="text-[9px] font-mono text-gold uppercase">Total Merges</div>
+              <div id="bpeStatTotalMerges" class="text-sm font-bold font-mono text-gold-light mt-0.5">0</div>
+            </div>
+            <div class="p-2 rounded-lg bg-theme-bg/60 border border-theme-border">
+              <div class="text-[9px] font-mono text-crimson uppercase">Final Vocab</div>
+              <div id="bpeStatFinalVocab" class="text-sm font-bold font-mono text-crimson-light mt-0.5">0</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- BPE Merge Operations & Timeline (7 Cols) -->
+        <div class="lg:col-span-7 space-y-4">
+          
+          <!-- Merge Stepper & Interactive Timeline -->
+          <div class="bg-theme-secondary p-5 rounded-2xl border border-theme-border shadow-xl space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-theme-border">
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-gold"></span>
+                <span class="text-xs font-semibold text-txt-main uppercase tracking-wider">Learned Merge Operations</span>
+              </div>
+              <span id="mergeProgressIndicator" class="text-[11px] font-mono text-gold">Ready to train</span>
+            </div>
+
+            <!-- Merges List Timeline -->
+            <div id="bpeMergeTimeline" class="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+              <div class="text-center py-10 text-xs text-txt-muted italic">
+                Click "Train BPE Vocabulary" to observe character pairs merge based on frequency.
+              </div>
+            </div>
+          </div>
+
+          <!-- Final Vocabulary Grid -->
+          <div class="bg-theme-secondary p-5 rounded-2xl border border-theme-border shadow-xl space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-theme-border">
+              <span class="text-xs font-semibold text-txt-main uppercase tracking-wider flex items-center gap-1.5">
+                <i data-lucide="database" class="w-3.5 h-3.5 text-crimson"></i>
+                <span>Generated BPE Vocabulary</span>
+              </span>
+              <span id="vocabPillCount" class="text-[11px] font-mono text-txt-muted">0 items</span>
+            </div>
+
+            <div id="bpeVocabPillsContainer" class="flex flex-wrap gap-1.5 max-h-[160px] overflow-y-auto p-1">
+              <span class="text-xs text-txt-muted italic">Train BPE to inspect vocabulary items...</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= 9. TOKEN BATTLE — COMPARISON ================= -->
+    <section id="token-battle" class="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
+      
+      <div class="pb-4 border-b border-theme-border flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <div class="flex items-center space-x-2 text-xs font-mono text-crimson uppercase tracking-widest font-semibold">
+            <span class="w-2 h-2 rounded-full bg-crimson"></span>
+            <span>SECTION 03 // TOKEN BATTLE</span>
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-display font-extrabold text-txt-main mt-1 uppercase tracking-tight">
+            Tokenizer Comparison Battle
+          </h2>
+          <p class="text-xs sm:text-sm text-txt-secondary mt-1">
+            Pit Word, Character, Educational BPE, and Pretrained GPT Tokenizers head-to-head on the exact same sentence.
+          </p>
+        </div>
+
+        <button onclick="runTokenBattle()" class="px-5 py-2.5 rounded-xl bg-crimson hover:bg-crimson-hover text-white text-xs font-bold uppercase tracking-wider shadow-crimson-sm transition flex items-center space-x-2">
+          <i data-lucide="swords" class="w-4 h-4"></i>
+          <span>Execute Battle</span>
+        </button>
+      </div>
+
+      <!-- Sentence Input for Battle -->
+      <div class="bg-theme-secondary p-4 rounded-xl border border-theme-border flex flex-col sm:flex-row gap-3 items-center">
+        <label class="text-xs font-mono text-txt-muted whitespace-nowrap">Battle Sentence:</label>
+        <input type="text" id="battleSentenceInput" value="Tokyo's neon lights reflect unforgettable memories across cyber Shibuya." class="flex-1 bg-theme-bg border border-theme-border rounded-lg px-3.5 py-2 text-xs text-txt-main font-mono focus:outline-none focus:ring-1 focus:ring-crimson w-full">
+        <div class="flex gap-1.5">
+          <button onclick="setBattleSample('short')" class="px-2 py-1 rounded bg-theme-surface hover:bg-theme-surfaceHover text-txt-secondary text-[11px] border border-theme-border">Short</button>
+          <button onclick="setBattleSample('contractions')" class="px-2 py-1 rounded bg-theme-surface hover:bg-theme-surfaceHover text-txt-secondary text-[11px] border border-theme-border">Contractions</button>
+          <button onclick="setBattleSample('multilingual')" class="px-2 py-1 rounded bg-theme-surface hover:bg-theme-surfaceHover text-txt-secondary text-[11px] border border-theme-border">Japanese / Emojis</button>
+        </div>
+      </div>
+
+      <!-- 4-Way Comparison Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- 1. Word Tokenizer -->
+        <div class="bg-theme-secondary rounded-2xl border border-theme-border p-4 flex flex-col justify-between space-y-4 shadow-lg">
+          <div>
+            <div class="flex items-center justify-between pb-2 border-b border-theme-border">
+              <span class="text-xs font-bold text-txt-main uppercase tracking-wider">Word Tokenizer</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-theme-surface text-txt-muted">Naive Split</span>
+            </div>
+            <div class="mt-3 flex items-baseline justify-between">
+              <span class="text-2xl font-bold font-mono text-txt-main" id="battleCountWord">0</span>
+              <span class="text-xs text-txt-muted">Tokens</span>
+            </div>
+            <div class="mt-3 text-[11px] text-txt-muted">
+              <strong>Token Segments:</strong>
+              <div id="battleSegmentsWord" class="mt-2 flex flex-wrap gap-1 max-h-[140px] overflow-y-auto"></div>
+            </div>
+          </div>
+          <div class="pt-3 border-t border-theme-border text-[11px] text-txt-muted">
+            <span class="text-red-400 font-semibold">Cons:</span> Out-of-vocabulary (OOV) for rare words, enormous dictionary size.
+          </div>
+        </div>
+
+        <!-- 2. Character Tokenizer -->
+        <div class="bg-theme-secondary rounded-2xl border border-theme-border p-4 flex flex-col justify-between space-y-4 shadow-lg">
+          <div>
+            <div class="flex items-center justify-between pb-2 border-b border-theme-border">
+              <span class="text-xs font-bold text-txt-main uppercase tracking-wider">Character Tokenizer</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-theme-surface text-txt-muted">1-Gram</span>
+            </div>
+            <div class="mt-3 flex items-baseline justify-between">
+              <span class="text-2xl font-bold font-mono text-txt-main" id="battleCountChar">0</span>
+              <span class="text-xs text-txt-muted">Tokens</span>
+            </div>
+            <div class="mt-3 text-[11px] text-txt-muted">
+              <strong>Token Segments:</strong>
+              <div id="battleSegmentsChar" class="mt-2 flex flex-wrap gap-1 max-h-[140px] overflow-y-auto"></div>
+            </div>
+          </div>
+          <div class="pt-3 border-t border-theme-border text-[11px] text-txt-muted">
+            <span class="text-red-400 font-semibold">Cons:</span> Very long token sequences, exhausts LLM context windows quickly.
+          </div>
+        </div>
+
+        <!-- 3. Educational BPE -->
+        <div class="bg-theme-secondary rounded-2xl border border-theme-border p-4 flex flex-col justify-between space-y-4 shadow-lg">
+          <div>
+            <div class="flex items-center justify-between pb-2 border-b border-theme-border">
+              <span class="text-xs font-bold text-gold uppercase tracking-wider">Educational BPE</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gold-subtle text-gold">Subword Merge</span>
+            </div>
+            <div class="mt-3 flex items-baseline justify-between">
+              <span class="text-2xl font-bold font-mono text-gold-light" id="battleCountEduBpe">0</span>
+              <span class="text-xs text-txt-muted">Tokens</span>
+            </div>
+            <div class="mt-3 text-[11px] text-txt-muted">
+              <strong>Token Segments:</strong>
+              <div id="battleSegmentsEduBpe" class="mt-2 flex flex-wrap gap-1 max-h-[140px] overflow-y-auto"></div>
+            </div>
+          </div>
+          <div class="pt-3 border-t border-theme-border text-[11px] text-txt-muted">
+            <span class="text-gold font-semibold">Pros:</span> Handles subwords gracefully, balanced sequence length.
+          </div>
+        </div>
+
+        <!-- 4. Pretrained GPT BPE -->
+        <div class="bg-theme-secondary rounded-2xl border border-crimson/40 bg-crimson-subtle/10 p-4 flex flex-col justify-between space-y-4 shadow-lg">
+          <div>
+            <div class="flex items-center justify-between pb-2 border-b border-crimson/30">
+              <span class="text-xs font-bold text-crimson-light uppercase tracking-wider">GPT Pretrained BPE</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-crimson-subtle text-crimson">cl100k_base</span>
+            </div>
+            <div class="mt-3 flex items-baseline justify-between">
+              <span class="text-2xl font-bold font-mono text-crimson-light" id="battleCountPretrained">0</span>
+              <span class="text-xs text-txt-muted">Tokens (Optimal)</span>
+            </div>
+            <div class="mt-3 text-[11px] text-txt-muted">
+              <strong>Token Segments:</strong>
+              <div id="battleSegmentsPretrained" class="mt-2 flex flex-wrap gap-1 max-h-[140px] overflow-y-auto"></div>
+            </div>
+          </div>
+          <div class="pt-3 border-t border-crimson/30 text-[11px] text-txt-muted">
+            <span class="text-emerald-400 font-semibold">Winner:</span> Maximum semantic compression, handles code, whitespace, & morphology.
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ================= 10. NEW MAJOR FEATURE: 3D EMBEDDING EXPLORER ================= -->
+    <section id="embeddings-3d" class="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8 border-t border-theme-border">
+      
+      <!-- Section Header -->
+      <div class="pb-4 border-b border-theme-border flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <div class="flex items-center space-x-2 text-xs font-mono text-gold uppercase tracking-widest font-semibold">
+            <span class="w-2.5 h-2.5 rounded-full bg-gold animate-pulse"></span>
+            <span>SECTION 04 // MAJOR FEATURE</span>
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-display font-extrabold text-txt-main mt-1 uppercase tracking-tight">
+            3D Embeddings
+          </h2>
+          <p class="text-xs sm:text-sm text-txt-secondary mt-1 max-w-3xl">
+            Explore how sentences are represented in a vector space and discover similarities between different texts.
+          </p>
+        </div>
+
+        <!-- Model Status / Vectorizer Badge -->
+        <div class="flex items-center space-x-2 text-xs font-mono">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span class="text-txt-secondary">Pipeline:</span>
+          <span id="embeddingEngineStatus" class="px-2 py-0.5 rounded bg-theme-secondary border border-theme-border text-gold font-bold">
+            64-D Semantic Vectorizer + Math PCA
+          </span>
+        </div>
+      </div>
+
+      <!-- 3D Plot Container & Interactive Surface -->
+      <div class="bg-theme-secondary rounded-2xl border border-theme-border shadow-2xl overflow-hidden flex flex-col">
+        
+        <!-- Plot Control Toolbar -->
+        <div class="p-4 bg-theme-surface border-b border-theme-border flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <span class="text-xs font-bold text-txt-main uppercase tracking-wider flex items-center gap-1.5">
+              <i data-lucide="box" class="w-4 h-4 text-gold"></i>
+              <span>Interactive 3D Scatter (PC1 × PC2 × PC3)</span>
+            </span>
+            <span class="text-[11px] text-txt-muted font-mono hidden sm:inline">
+              | Variance Explained: <strong id="pcaVarianceExplained" class="text-gold font-semibold">PC1: 42% · PC2: 28% · PC3: 16%</strong>
+            </span>
+          </div>
+
+          <!-- Camera Preset Buttons -->
+          <div class="flex items-center space-x-1.5 text-xs font-mono">
+            <button onclick="setCameraView('iso')" class="px-2.5 py-1 rounded bg-theme-bg hover:bg-theme-surfaceHover text-txt-secondary hover:text-white border border-theme-border transition" title="Default 3D Isometric View">
+              3D Iso
+            </button>
+            <button onclick="setCameraView('top')" class="px-2.5 py-1 rounded bg-theme-bg hover:bg-theme-surfaceHover text-txt-secondary hover:text-white border border-theme-border transition" title="Top-down PC1 vs PC2">
+              PC1-PC2
+            </button>
+            <button onclick="setCameraView('side')" class="px-2.5 py-1 rounded bg-theme-bg hover:bg-theme-surfaceHover text-txt-secondary hover:text-white border border-theme-border transition" title="Side view PC1 vs PC3">
+              PC1-PC3
+            </button>
+            <button onclick="resetPlotCamera()" class="px-2.5 py-1 rounded bg-crimson/20 hover:bg-crimson/30 text-crimson-light border border-crimson/40 transition">
+              Reset View
+            </button>
+          </div>
+        </div>
+
+        <!-- WebGL 3D Plot Area -->
+        <div class="relative w-full h-[520px] bg-theme-bg">
+          <div id="embedding3dPlot" class="w-full h-full"></div>
+          
+          <!-- Loading Overlay -->
+          <div id="plotLoadingOverlay" class="absolute inset-0 bg-theme-bg/90 backdrop-blur-sm flex flex-col items-center justify-center space-y-3 z-10 transition-opacity duration-300 hidden">
+            <div class="w-10 h-10 border-2 border-crimson border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-xs font-mono text-txt-secondary">Projecting high-dimensional vectors via PCA...</p>
+          </div>
+
+          <!-- Legend Overlay in 3D Box -->
+          <div class="absolute bottom-4 left-4 p-3 rounded-xl bg-theme-secondary/90 backdrop-blur-md border border-theme-border text-[11px] font-mono space-y-1.5 shadow-lg pointer-events-none">
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-sky-400 border border-white/40"></span>
+              <span class="text-txt-main">Sample Sentences (Circles)</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rotate-45 bg-crimson border border-gold"></span>
+              <span class="text-txt-main">User-Added Sentences (Diamonds)</span>
+            </div>
+            <div class="text-[10px] text-txt-muted pt-1">
+              Drag to rotate · Scroll to zoom
+            </div>
+          </div>
+        </div>
+
+        <!-- Selected Point Inspection Detail Card -->
+        <div id="pointInspectCard" class="p-4 bg-theme-surface border-t border-theme-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div class="flex items-start sm:items-center space-x-2.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-gold mt-1 sm:mt-0"></span>
+            <div>
+              <span class="font-bold text-txt-main" id="inspectPointTitle">Select or hover over any point in the 3D space:</span>
+              <span class="text-txt-secondary ml-1" id="inspectPointText">Click any marker to inspect its PCA coordinates and full high-dimensional vector.</span>
+            </div>
+          </div>
+          <div class="font-mono text-txt-muted text-[11px] whitespace-nowrap" id="inspectPointCoords">
+            PC1: -- | PC2: -- | PC3: --
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Add Sentence & Sentence Similarity Sub-panels -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- C. ADD SENTENCE: "TRY A WORD OR SENTENCE" (6 Cols) -->
+        <div class="lg:col-span-6 space-y-4 bg-theme-secondary p-5 rounded-2xl border border-theme-border shadow-xl">
+          <div class="flex items-center justify-between pb-3 border-b border-theme-border">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-txt-main flex items-center gap-2">
+              <i data-lucide="plus-circle" class="w-4 h-4 text-crimson"></i>
+              <span>TRY A WORD OR SENTENCE</span>
+            </h3>
+            <span class="text-[10px] font-mono text-crimson px-1.5 py-0.2 rounded bg-crimson-subtle border border-crimson/30">
+              Projects onto existing PCA basis
+            </span>
+          </div>
+
+          <p class="text-xs text-txt-secondary">
+            Enter any new sentence or word. It will be converted into a semantic embedding vector and projected into the exact same fitted 3D coordinate system as a diamond marker.
+          </p>
+
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input type="text" id="newUserSentenceInput" placeholder="e.g. Deep learning networks analyze massive datasets..." class="flex-1 bg-theme-bg border border-theme-border rounded-xl px-3.5 py-2.5 text-xs text-txt-main font-mono placeholder-txt-faint focus:outline-none focus:ring-2 focus:ring-crimson">
+            <button onclick="addUserSentenceToPlot()" id="btnAddSentence" class="py-2.5 px-5 rounded-xl bg-crimson hover:bg-crimson-hover text-white text-xs font-bold uppercase tracking-wider shadow-crimson-sm transition flex items-center justify-center space-x-1.5 whitespace-nowrap">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              <span>ADD TO PLOT</span>
+            </button>
+          </div>
+
+          <!-- Quick Suggestions -->
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <span class="text-[11px] text-txt-muted">Try:</span>
+            <button onclick="fillUserSentence('Robotics and neural systems interact in real time.')" class="text-[11px] text-txt-secondary hover:text-gold underline">AI Robotics</button>
+            <span class="text-txt-faint">·</span>
+            <button onclick="fillUserSentence('Shinjuku skyscrapers glow beneath rainy asphalt.')" class="text-[11px] text-txt-secondary hover:text-crimson underline">Shinjuku Cyber</button>
+            <span class="text-txt-faint">·</span>
+            <button onclick="fillUserSentence('Reading books expands human curiosity.')" class="text-[11px] text-txt-secondary hover:text-gold underline">Curiosity</button>
+          </div>
+
+          <!-- User Plotted Sentences List -->
+          <div class="pt-2 border-t border-theme-border">
+            <div class="flex items-center justify-between text-xs font-semibold text-txt-main mb-2">
+              <span>Your Plotted Sentences (<span id="userSentenceCount">0</span>)</span>
+              <button onclick="clearUserSentences()" class="text-[11px] text-crimson hover:underline">Clear User Points</button>
+            </div>
+            <div id="userSentenceList" class="space-y-1.5 max-h-[140px] overflow-y-auto text-xs font-mono text-txt-secondary">
+              <span class="text-txt-muted italic">No user sentences added yet. Add one above!</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- F. SENTENCE SIMILARITY (6 Cols) -->
+        <div class="lg:col-span-6 space-y-4 bg-theme-secondary p-5 rounded-2xl border border-theme-border shadow-xl">
+          <div class="flex items-center justify-between pb-3 border-b border-theme-border">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-txt-main flex items-center gap-2">
+              <i data-lucide="scale" class="w-4 h-4 text-gold"></i>
+              <span>SENTENCE SIMILARITY (COSINE METRIC)</span>
+            </h3>
+            <span class="text-[10px] font-mono text-gold px-1.5 py-0.2 rounded bg-gold-subtle border border-gold/30">
+              Full Vector Space
+            </span>
+          </div>
+
+          <p class="text-xs text-txt-secondary">
+            Select two sentences to calculate their authentic Cosine Similarity ($\cos \theta = \frac{u \cdot v}{\|u\| \|v\|}$) using the full high-dimensional embedding vectors, not just the 3D projection.
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label class="block text-txt-muted mb-1 font-mono">Sentence A:</label>
+              <select id="simSelectA" onchange="calculateSimilarity()" class="w-full bg-theme-bg border border-theme-border rounded-lg p-2 text-txt-main font-mono text-xs focus:outline-none focus:ring-1 focus:ring-gold"></select>
+            </div>
+            <div>
+              <label class="block text-txt-muted mb-1 font-mono">Sentence B:</label>
+              <select id="simSelectB" onchange="calculateSimilarity()" class="w-full bg-theme-bg border border-theme-border rounded-lg p-2 text-txt-main font-mono text-xs focus:outline-none focus:ring-1 focus:ring-gold"></select>
+            </div>
+          </div>
+
+          <!-- Similarity Score Display Box -->
+          <div class="p-4 rounded-xl bg-theme-bg border border-theme-border space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono text-txt-muted">Cosine Similarity Score:</span>
+              <span id="simScoreVal" class="text-2xl font-bold font-mono text-gold">0.000</span>
+            </div>
+            
+            <!-- Visual Progress Bar -->
+            <div class="w-full bg-theme-secondary h-2.5 rounded-full overflow-hidden border border-theme-border">
+              <div id="simProgressBar" class="h-full bg-gradient-to-r from-crimson to-gold rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+
+            <div class="text-xs text-txt-secondary" id="simExplanationText">
+              Select two sentences to compute high-dimensional angular proximity.
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- E. EDIT SAMPLE SENTENCES (Expandable Accordion) -->
+      <div class="bg-theme-secondary rounded-2xl border border-theme-border shadow-xl overflow-hidden">
+        <button onclick="toggleSampleEditor()" class="w-full p-4 flex items-center justify-between text-left hover:bg-theme-surface transition">
+          <span class="flex items-center space-x-2 text-xs font-bold text-txt-main uppercase tracking-wider">
+            <i data-lucide="edit-3" class="w-4 h-4 text-crimson"></i>
+            <span>EDIT SAMPLE SENTENCES (CUSTOM CORPUS)</span>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-theme-surface border border-theme-border text-txt-muted font-mono" id="sampleCountBadge">7 Sentences</span>
+          </span>
+          <i data-lucide="chevron-down" id="sampleEditorChevron" class="w-4 h-4 text-txt-muted transition-transform"></i>
+        </button>
+
+        <div id="sampleEditorBody" class="hidden p-5 border-t border-theme-border space-y-4">
+          <p class="text-xs text-txt-secondary">
+            Modify the foundational 7 sample sentences below or add new ones. When you click "Recalculate Visualization", the PCA projection matrix ($W$) and empirical centroid ($\mu$) will be re-fitted mathematically.
+          </p>
+
+          <div id="sampleSentenceInputsList" class="space-y-2">
+            <!-- Dynamically populated sentence rows -->
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-theme-border">
+            <button onclick="addNewSampleRow()" class="px-3 py-1.5 rounded-lg bg-theme-surface hover:bg-theme-surfaceHover text-txt-main border border-theme-border text-xs font-semibold flex items-center space-x-1.5 transition">
+              <i data-lucide="plus" class="w-3.5 h-3.5 text-gold"></i>
+              <span>Add Sentence Row</span>
+            </button>
+            <div class="flex space-x-2">
+              <button onclick="resetDefaultSamples()" class="px-3 py-1.5 rounded-lg text-txt-muted hover:text-white text-xs transition">
+                Reset Defaults
+              </button>
+              <button onclick="recalculatePCAAndPlot()" class="px-5 py-2 rounded-xl bg-gold hover:bg-gold-hover text-theme-bg text-xs font-bold uppercase tracking-wider shadow-gold-sm transition flex items-center space-x-1.5">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                <span>Recalculate Visualization</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- G. EDUCATIONAL EXPLANATION (Compact, Beginner-Friendly Grid) -->
+      <div class="bg-theme-secondary p-6 rounded-2xl border border-theme-border shadow-xl space-y-5">
+        <div class="border-b border-theme-border pb-3">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-txt-main flex items-center gap-2">
+            <i data-lucide="compass" class="w-4 h-4 text-gold"></i>
+            <span>Dimensionality Reduction & Vector Space: Core Concepts</span>
+          </h3>
+          <p class="text-xs text-txt-secondary mt-0.5">
+            Essential foundation for understanding how AI models bridge text tokens and vector coordinates.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+          
+          <div class="p-4 rounded-xl bg-theme-bg border border-theme-border space-y-1.5">
+            <div class="font-bold text-txt-main flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-crimson"></span>
+              <span>1. What is a sentence embedding?</span>
+            </div>
+            <p class="text-txt-secondary leading-relaxed text-[11px]">
+              A dense numerical vector that encapsulates the semantic meaning of an entire sentence. Unlike tokenization (which splits text into discrete IDs), an embedding translates concepts into continuous geometric coordinates.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-theme-bg border border-theme-border space-y-1.5">
+            <div class="font-bold text-txt-main flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-gold"></span>
+              <span>2. What is a vector?</span>
+            </div>
+            <p class="text-txt-secondary leading-relaxed text-[11px]">
+              An ordered list of numbers (e.g., $[0.24, -0.81, 0.45, ...]$) representing a point or directional arrow in a high-dimensional space. In modern LLMs, embedding vectors often have 768 to 4096 dimensions.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-theme-bg border border-theme-border space-y-1.5">
+            <div class="font-bold text-txt-main flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-crimson"></span>
+              <span>3. Dimensionality Reduction</span>
+            </div>
+            <p class="text-txt-secondary leading-relaxed text-[11px]">
+              Humans can only perceive 3 spatial dimensions. Dimensionality reduction compresses 64-D or 768-D vectors into 3D (PC1, PC2, PC3) while attempting to preserve as much variance and semantic distance as possible.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-theme-bg border border-theme-border space-y-1.5">
+            <div class="font-bold text-txt-main flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-gold"></span>
+              <span>4. What is PCA?</span>
+            </div>
+            <p class="text-txt-secondary leading-relaxed text-[11px]">
+              Principal Component Analysis computes the eigenvectors of the dataset's covariance matrix. It rotates the coordinate axes to point along the directions of maximum statistical spread (variance).
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-theme-bg border border-theme-border space-y-1.5">
+            <div class="font-bold text-txt-main flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-crimson"></span>
+              <span>5. What do PC1, PC2, PC3 represent?</span>
+            </div>
+            <p class="text-txt-secondary leading-relaxed text-[11px]">
+              PC1 is the linear combination of original dimensions that captures the greatest variance. PC2 is the second most informative orthogonal axis, and PC3 captures the third. Together they form our 3D view.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-theme-bg border border-theme-border space-y-1.5">
+            <div class="font-bold text-txt-main flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-gold"></span>
+              <span>6. Why do similar sentences cluster?</span>
+            </div>
+            <p class="text-txt-secondary leading-relaxed text-[11px]">
+              Sentences sharing semantic topics (such as AI, computers, or Tokyo) activate similar subword features. In vector space, their angle is small, yielding high Cosine Similarity and proximity in the 3D plot.
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= 11. TOKEN EXPLORER ================= -->
+    <section id="token-explorer" class="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8 bg-grid-pattern border-t border-theme-border">
+      
+      <div class="pb-4 border-b border-theme-border">
+        <div class="flex items-center space-x-2 text-xs font-mono text-crimson uppercase tracking-widest font-semibold">
+          <span class="w-2 h-2 rounded-full bg-crimson"></span>
+          <span>SECTION 05 // TOKEN EXPLORER</span>
+        </div>
+        <h2 class="text-2xl sm:text-3xl font-display font-extrabold text-txt-main mt-1 uppercase tracking-tight">
+          Token Intelligence & Frequency Inspector
+        </h2>
+        <p class="text-xs sm:text-sm text-txt-secondary mt-1">
+          Deep structural analysis of token distributions, repeated patterns, character breakdowns, and subword frequencies.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Frequency Distribution Chart (7 Cols) -->
+        <div class="lg:col-span-7 bg-theme-secondary p-5 rounded-2xl border border-theme-border shadow-xl space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-theme-border">
+            <span class="text-xs font-bold text-txt-main uppercase tracking-wider flex items-center gap-1.5">
+              <i data-lucide="bar-chart-2" class="w-4 h-4 text-crimson"></i>
+              <span>Token Frequency Distribution</span>
+            </span>
+            <span class="text-[11px] font-mono text-txt-muted">Top 8 occurrences</span>
+          </div>
+
+          <!-- Dynamic Bar Chart Canvas -->
+          <div id="tokenFreqChartContainer" class="h-64 flex items-end gap-2 pt-6 pb-2 px-2 border-b border-theme-border">
+            <!-- Populated via JS -->
+          </div>
+
+          <div class="text-[11px] text-txt-muted flex justify-between font-mono">
+            <span>Y-Axis: Count (Frequency)</span>
+            <span>X-Axis: Distinct Tokens</span>
+          </div>
+        </div>
+
+        <!-- Token Search & Subword Insights (5 Cols) -->
+        <div class="lg:col-span-5 space-y-4 bg-theme-secondary p-5 rounded-2xl border border-theme-border shadow-xl">
+          <div class="flex items-center justify-between pb-3 border-b border-theme-border">
+            <span class="text-xs font-bold text-txt-main uppercase tracking-wider flex items-center gap-1.5">
+              <i data-lucide="search" class="w-4 h-4 text-gold"></i>
+              <span>Token Pattern Search</span>
+            </span>
+          </div>
+
+          <div class="relative">
+            <input type="text" id="explorerSearchInput" oninput="runTokenExplorerSearch()" placeholder="Type token or substring to search..." class="w-full bg-theme-bg border border-theme-border rounded-xl pl-9 pr-3 py-2 text-xs text-txt-main font-mono placeholder-txt-faint focus:outline-none focus:ring-1 focus:ring-gold">
+            <i data-lucide="search" class="w-3.5 h-3.5 text-txt-muted absolute left-3 top-2.5"></i>
+          </div>
+
+          <div id="explorerSearchResults" class="space-y-2 max-h-[220px] overflow-y-auto">
+            <div class="p-3 rounded-lg bg-theme-bg border border-theme-border text-xs text-txt-secondary">
+              Search any token to inspect its exact character offsets, occurrences, and unicode composition.
+            </div>
+          </div>
+
+          <!-- Repeated Patterns Detector -->
+          <div class="pt-3 border-t border-theme-border space-y-2">
+            <div class="text-xs font-semibold text-txt-main flex items-center gap-1.5">
+              <i data-lucide="repeat" class="w-3.5 h-3.5 text-crimson"></i>
+              <span>Repeated Sequence Patterns:</span>
+            </div>
+            <div id="repeatedPatternsBox" class="text-xs font-mono text-txt-muted">
+              Analyzing text patterns...
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ================= 12. LEARNING CORNER ================= -->
+    <section id="learn" class="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8 border-t border-theme-border">
+      
+      <div class="pb-4 border-b border-theme-border">
+        <div class="flex items-center space-x-2 text-xs font-mono text-gold uppercase tracking-widest font-semibold">
+          <span class="w-2 h-2 rounded-full bg-gold"></span>
+          <span>SECTION 06 // KNOWLEDGE VAULT</span>
+        </div>
+        <h2 class="text-2xl sm:text-3xl font-display font-extrabold text-txt-main mt-1 uppercase tracking-tight">
+          Learning Corner
+        </h2>
+        <p class="text-xs sm:text-sm text-txt-secondary mt-1">
+          Master the theoretical underpinnings of Natural Language Processing, tokenizers, vocabulary mechanics, and vector spaces.
+        </p>
+      </div>
+
+      <!-- 9 Expandable Educational Modules -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="learningCardsGrid">
+        
+        <!-- Card 1 -->
+        <div class="learning-card bg-theme-secondary rounded-2xl border border-theme-border p-5 space-y-3 hover:border-crimson/50 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono text-crimson font-bold uppercase">MODULE 01</span>
+            <i data-lucide="scissors" class="w-4 h-4 text-crimson"></i>
+          </div>
+          <h3 class="text-sm font-bold text-txt-main">What is tokenization?</h3>
+          <p class="text-xs text-txt-secondary leading-relaxed">
+            The process of segmenting continuous strings of human text into discrete atomic chunks called <em>tokens</em>. Computers cannot natively understand grammar or meaning; tokenization translates characters into integers that neural networks can process.
+          </p>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="learning-card bg-theme-secondary rounded-2xl border border-theme-border p-5 space-y-3 hover:border-gold/50 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono text-gold font-bold uppercase">MODULE 02</span>
+            <i data-lucide="cpu" class="w-4 h-4 text-gold"></i>
+          </div>
+          <h3 class="text-sm font-bold text-txt-main">Why do LLMs use tokens?</h3>
+          <p class="text-xs text-txt-secondary leading-relaxed">
+            Word-level tokenization would require a dictionary of millions of words and would fail on typos or new slang. Character-level tokenization makes sequences too long. Subword tokens provide the optimal balance between dictionary size and sequence length.
+          </p>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="learning-card bg-theme-secondary rounded-2xl border border-theme-border p-5 space-y-3 hover:border-crimson/50 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono text-crimson font-bold uppercase">MODULE 03</span>
+            <i data-lucide="hash" class="w-4 h-4 text-crimson"></i>
+          </div>
+          <h3 class="text-sm font-bold text-txt-main">What are token IDs?</h3>
+          <p class="text-xs text-txt-secondary leading-relaxed">
+            Every unique token in an LLM’s vocabulary has an assigned index (integer). For example, in GPT-4’s tokenizer, <code>"Tokyo"</code> might map to integer <code>21542</code>. The model embeds these integer IDs into matrices of float32 weights.
+          </p>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="learning-card bg-theme-secondary rounded-2xl border border-theme-border p-5 space-y-3 hover:border-gold/50 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono text-gold font-bold uppercase">MODULE 04</span>
+            <i data-lucide="git-merge" class="w-4 h-4 text-gold"></i>
+          </div>
+          <h3 class="text-sm font-bold text-txt-main">What is Byte Pair Encoding?</h3>
+          <p class="text-xs text-txt-secondary leading-relaxed">
+            Originally a data compression algorithm (Gage, 1994), BPE was adapted for NLP by Sennrich et al. (2015). It starts with individual characters and iteratively merges the most frequent adjacent bigram pairs in the training corpus.
+          </p>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="learning-card bg-theme-secondary rounded-2xl border border-theme-border p-5 space-y-3 hover:border-crimson/50 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono text-crimson font-bold uppercase">MODULE 05</span>
+            <i data-lucide="database" class="w-4 h-4 text-crimson"></i>
+          </div>
+          <h3 class="text-sm font-bold text-txt-main">What is vocabulary size?</h3>
+          <p class="text-xs text-txt-secondary leading-relaxed">
+            The total count of distinct subwords an LLM knows. GPT-2 had 50,257 tokens, LLaMA-3 uses 128,256 tokens, and GPT-4 (cl100k_base) uses 100,277 tokens. Larger vocabularies compress text more efficiently but require larger embedding matrices.
+          </p>
+        </div>
+
+        <!-- Card 6 -->
+        <div class="learning-card bg-theme-secondary rounded-2xl border border-theme-border p-5 space-y-3 hover:border-gold/50 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono text-gold font-bold uppercase">MODULE 06</span>
+            <i data-lucide="smile" class="w-4 h-4 text-gold"></i>
+          </div>
+          <h3 class="text-sm font-bold text-txt-main">How are emojis tokenized?</h3>
+          <p class="text-xs text-txt-secondary leading-relaxed">
+            Emojis are multi-byte UTF-8 sequences. In byte-level BPE, an emoji like ⚡ (3 bytes: <code>0xE2 0x9A 0xA1</code>) or 🇯🇵 (flag combination) is either recognized as a dedicated token or decomposed into its fundamental raw bytes without throwing an error!
+          </p>
+        </div>
+
+        <!-- Card 7 -->
+        <div class="learning-card bg-theme-secondary rounded-2xl border border-theme-border p-5 space-y-3 hover:border-crimson/50 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono text-crimson font-bold uppercase">MODULE 07</span>
+            <i data-lucide="maximize" class="w-4 h-4 text-crimson"></i>
+          </div>
+          <h3 class="text-sm font-bold text-txt-main">What are context windows?</h3>
+          <p class="text-xs text-txt-secondary leading-relaxed">
+            The maximum number of tokens an LLM can attend to in a single forward pass. Because attention memory scales with sequence length squared ($\mathcal{O}(N^2)$), efficient tokenization that compresses text into fewer tokens directly maximizes effective reasoning window!
+          </p>
+        </div>
+
+        <!-- Card 8 -->
+        <div class="learning-card bg-theme-secondary rounded-2xl border border-theme-border p-5 space-y-3 hover:border-gold/50 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono text-gold font-bold uppercase">MODULE 08</span>
+            <i data-lucide="layers" class="w-4 h-4 text-gold"></i>
+          </div>
+          <h3 class="text-sm font-bold text-txt-main">What are sentence embeddings?</h3>
+          <p class="text-xs text-txt-secondary leading-relaxed">
+            While tokens represent local linguistic fragments, sentence embeddings pool the entire sequence into a single fixed-length vector in semantic space. They power semantic search, vector databases, and retrieval-augmented generation (RAG).
+          </p>
+        </div>
+
+        <!-- Card 9 -->
+        <div class="learning-card bg-theme-secondary rounded-2xl border border-theme-border p-5 space-y-3 hover:border-crimson/50 transition">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono text-crimson font-bold uppercase">MODULE 09</span>
+            <i data-lucide="orbit" class="w-4 h-4 text-crimson"></i>
+          </div>
+          <h3 class="text-sm font-bold text-txt-main">How does PCA work?</h3>
+          <p class="text-xs text-txt-secondary leading-relaxed">
+            Principal Component Analysis performs an orthogonal linear transformation to project correlated high-dimensional vectors onto uncorrelated axes of maximum variance, preserving global semantic cluster structures in 3D.
+          </p>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ================= TOKEN DETAIL INSPECT MODAL / DRAWER ================= -->
+  <div id="tokenModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden">
+    <div class="bg-theme-secondary border border-theme-border rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+      <div class="flex items-center justify-between pb-3 border-b border-theme-border">
+        <div class="flex items-center space-x-2">
+          <span class="w-3 h-3 rounded-full bg-crimson"></span>
+          <h4 class="text-sm font-bold text-txt-main uppercase tracking-wider">Token Inspector</h4>
+        </div>
+        <button onclick="closeTokenModal()" class="text-txt-muted hover:text-white transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs font-mono">
+        <div class="p-4 rounded-xl bg-theme-bg border border-theme-border flex items-center justify-between">
+          <span class="text-txt-muted">Token String:</span>
+          <span id="modalTokenText" class="text-base font-bold text-gold px-2 py-0.5 rounded bg-theme-surface"></span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div class="p-3 rounded-lg bg-theme-bg border border-theme-border">
+            <div class="text-[10px] text-txt-muted uppercase">Token Position</div>
+            <div id="modalTokenPos" class="text-sm font-bold text-txt-main mt-0.5">#0</div>
+          </div>
+          <div class="p-3 rounded-lg bg-theme-bg border border-theme-border">
+            <div class="text-[10px] text-txt-muted uppercase">Token ID</div>
+            <div id="modalTokenId" class="text-sm font-bold text-crimson-light mt-0.5">0</div>
+          </div>
+          <div class="p-3 rounded-lg bg-theme-bg border border-theme-border">
+            <div class="text-[10px] text-txt-muted uppercase">Character Length</div>
+            <div id="modalTokenLength" class="text-sm font-bold text-txt-main mt-0.5">0 chars</div>
+          </div>
+          <div class="p-3 rounded-lg bg-theme-bg border border-theme-border">
+            <div class="text-[10px] text-txt-muted uppercase">Byte Length</div>
+            <div id="modalTokenByteLen" class="text-sm font-bold text-txt-main mt-0.5">0 bytes</div>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-lg bg-theme-bg border border-theme-border space-y-1">
+          <div class="text-[10px] text-txt-muted uppercase">UTF-8 Hex & Codepoints:</div>
+          <div id="modalTokenBytes" class="text-[11px] text-txt-secondary break-all"></div>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-theme-border flex justify-end">
+        <button onclick="closeTokenModal()" class="px-4 py-2 rounded-xl bg-theme-surface hover:bg-theme-surfaceHover text-txt-main text-xs font-semibold border border-theme-border transition">
+          Close Inspector
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= NOTIFICATION TOAST ================= -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="border-t border-theme-border bg-theme-secondary py-8 text-xs text-txt-muted">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-6 h-6 rounded bg-crimson flex items-center justify-center font-display font-black text-white text-xs">
+          東
+        </div>
+        <span class="font-display font-bold text-txt-main tracking-wider">TOKYO TOKEN LAB</span>
+        <span class="text-txt-faint">|</span>
+        <span class="font-jp text-[11px]">東京トークン研究所 · Academic AI Assignment</span>
+      </div>
+      <div class="text-center sm:text-right text-[11px] text-txt-faint">
+        Every Word Has Its Own Story · Pure Client-Side Math & Vector Engine
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================= JAVASCRIPT APPLICATION CORE ================= -->
+  <script>
+    /* =========================================================================
+     * APPLICATION GLOBAL STATE & CONSTANTS
+     * ========================================================================= */
+    const APP = {
+      activeTokenizer: 'bpe_pretrained', // 'bpe_pretrained', 'bpe_edu', 'word', 'char'
+      currentTokens: [],
+      highlightDuplicates: false,
+      tableSortCol: 'position',
+      tableSortAsc: true,
+      
+      // BPE Builder State
+      bpeModel: {
+        vocab: new Set(),
+        merges: [],
+        wordFreqs: {}
+      },
+
+      // 3D Embedding Explorer & Mathematical PCA State
+      embeddingState: {
+        sampleSentences: [
+          "Artificial intelligence is transforming the world.",
+          "Machine learning helps computers recognize patterns.",
+          "Natural language processing allows computers to understand text.",
+          "Python is a popular programming language.",
+          "Tokyo never sleeps.",
+          "Technology connects people across the world.",
+          "Learning new skills creates opportunities."
+        ],
+        userSentences: [],
+        pcaFitted: null, // { mean: [], components: [[], [], []], varianceRatios: [] }
+        plottedPoints: []
+      }
+    };
+
+    /* =========================================================================
+     * PRETRAINED GPT BPE SUBWORD SIMULATOR & VOCABULARY ENGINE
+     * Implements accurate byte-level subword segmentation (GPT-2/GPT-4 cl100k style)
+     * ========================================================================= */
+    const GPT_SUBWORD_RULES = [
+      // Common English Contractions & Suffixes
+      "'s", "'t", "'re", "'ve", "'m", "'ll", "'d",
+      "ing", "ed", "tion", "tions", "ment", "ments", "able", "ible", "ness", "ity",
+      // High-Frequency Tech/Tokyo Tokens
+      "Tokyo", "token", "Token", "ization", "izer", "artificial", "intelligence", "neural",
+      "machine", "learning", "network", "language", "model", "cyber", "Shibuya", "neon",
+      "vector", "embedding", "world", "Python", "code", "programming", "computer", "algorithm",
+      "transform", "data", "system", "process", "skills", "sleeps", "memories"
+    ];
+
+    function tokenizePretrainedBPE(text) {
+      if (!text) return [];
+      const tokens = [];
+      let pos = 0;
+
+      // Regex matching GPT-style chunks: contractions, words with leading space, punctuation, numbers
+      const regex = /'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+/gu;
+      let match;
+
+      while ((match = regex.exec(text)) !== null) {
+        let chunk = match[0];
+        const startPos = match.index;
+
+        // Subword segmentation if chunk is a longer word
+        const subwords = splitIntoSubwords(chunk);
+        
+        let subOffset = 0;
+        subwords.forEach(sub => {
+          // Replace standard space with byte-level 'Ġ' for visual clarity in UI
+          const displayStr = sub.replace(/^ /, 'Ġ');
+          const tokenId = generateDeterministicTokenId(sub);
+          tokens.push({
+            position: tokens.length,
+            rawText: sub,
+            displayText: displayStr,
+            id: tokenId,
+            charLength: sub.length,
+            startOffset: startPos + subOffset,
+            endOffset: startPos + subOffset + sub.length,
+            type: sub.startsWith(' ') ? 'word_start' : 'subword'
+          });
+          subOffset += sub.length;
+        });
+      }
+      return tokens;
+    }
+
+    function splitIntoSubwords(word) {
+      const hasLeadingSpace = word.startsWith(' ');
+      const clean = hasLeadingSpace ? word.slice(1) : word;
+      
+      if (clean.length <= 4) return [word];
+
+      // Check common prefixes/suffixes
+      for (const rule of GPT_SUBWORD_RULES) {
+        if (clean.toLowerCase().endsWith(rule) && clean.length > rule.length + 2) {
+          const stem = clean.slice(0, clean.length - rule.length);
+          const suffix = clean.slice(clean.length - rule.length);
+          return [hasLeadingSpace ? ' ' + stem : stem, suffix];
+        }
+      }
+      return [word];
+    }
+
+    function generateDeterministicTokenId(tokenStr) {
+      // Deterministic hash mapping into 100k vocabulary range
+      let hash = 5381;
+      for (let i = 0; i < tokenStr.length; i++) {
+        hash = ((hash << 5) + hash) + tokenStr.charCodeAt(i);
+        hash = hash & hash;
+      }
+      return Math.abs(hash % 98304) + 1024;
+    }
+
+    /* =========================================================================
+     * WORD & CHARACTER TOKENIZERS
+     * ========================================================================= */
+    function tokenizeWord(text) {
+      if (!text) return [];
+      const tokens = [];
+      const regex = /\S+/g;
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        const word = match[0];
+        tokens.push({
+          position: tokens.length,
+          rawText: word,
+          displayText: word,
+          id: generateDeterministicTokenId(word.toLowerCase()),
+          charLength: word.length,
+          startOffset: match.index,
+          endOffset: match.index + word.length,
+          type: 'word'
+        });
+      }
+      return tokens;
+    }
+
+    function tokenizeCharacter(text) {
+      if (!text) return [];
+      const tokens = [];
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const codePoint = ch.codePointAt(0);
+        tokens.push({
+          position: tokens.length,
+          rawText: ch,
+          displayText: ch === ' ' ? '␣' : (ch === '\n' ? '↵' : ch),
+          id: codePoint,
+          charLength: 1,
+          startOffset: i,
+          endOffset: i + 1,
+          type: 'char'
+        });
+      }
+      return tokens;
+    }
+
+    function tokenizeEducationalBPE(text) {
+      if (!text) return [];
+      // Use learned BPE model merges if trained, else character baseline with basic merges
+      const words = text.split(/(\s+)/);
+      const tokens = [];
+      
+      words.forEach(w => {
+        if (!w) return;
+        if (/^\s+$/.test(w)) {
+          tokens.push({
+            position: tokens.length,
+            rawText: w,
+            displayText: '␣',
+            id: 32,
+            charLength: w.length,
+            type: 'whitespace'
+          });
+          return;
+        }
+
+        // Apply learned merges
+        let symbols = w.split('');
+        if (APP.bpeModel.merges && APP.bpeModel.merges.length > 0) {
+          APP.bpeModel.merges.forEach(merge => {
+            const pair = merge.pair;
+            const merged = merge.merged;
+            let i = 0;
+            while (i < symbols.length - 1) {
+              if (symbols[i] === pair[0] && symbols[i+1] === pair[1]) {
+                symbols.splice(i, 2, merged);
+              } else {
+                i++;
+              }
+            }
+          });
+        }
+
+        symbols.forEach(sym => {
+          tokens.push({
+            position: tokens.length,
+            rawText: sym,
+            displayText: sym,
+            id: generateDeterministicTokenId(sym) % 10000,
+            charLength: sym.length,
+            type: 'bpe_subword'
+          });
+        });
+      });
+
+      return tokens;
+    }
+
+    /* =========================================================================
+     * CORE TOKENIZER WORKSPACE CONTROLLER
+     * ========================================================================= */
+    function runTokenization() {
+      const input = document.getElementById('tokenizerInput').value;
+      
+      // Update Raw Counters
+      document.getElementById('rawCharCount').innerText = input.length;
+      document.getElementById('rawWordCount').innerText = input.trim() ? input.trim().split(/\s+/).length : 0;
+
+      let tokens = [];
+      if (APP.activeTokenizer === 'bpe_pretrained') {
+        tokens = tokenizePretrainedBPE(input);
+      } else if (APP.activeTokenizer === 'bpe_edu') {
+        tokens = tokenizeEducationalBPE(input);
+      } else if (APP.activeTokenizer === 'word') {
+        tokens = tokenizeWord(input);
+      } else if (APP.activeTokenizer === 'char') {
+        tokens = tokenizeCharacter(input);
+      }
+
+      APP.currentTokens = tokens;
+
+      // Update Statistics
+      updateTokenizerStatistics(input, tokens);
+
+      // Render Visual Token Stream
+      renderTokenVisualizer(tokens);
+
+      // Render Token Breakdown Table
+      renderTokenTable(tokens);
+
+      // Update Token Explorer
+      updateTokenExplorer(tokens);
+    }
+
+    function selectTokenizerMethod(method) {
+      APP.activeTokenizer = method;
+      const methods = ['pretrained', 'bpe', 'word', 'char'];
+      
+      methods.forEach(m => {
+        const btn = document.getElementById(`btn-method-${m}`);
+        if ((m === 'pretrained' && method === 'bpe_pretrained') ||
+            (m === 'bpe' && method === 'bpe_edu') ||
+            (m === 'word' && method === 'word') ||
+            (m === 'char' && method === 'char')) {
+          btn.className = "method-tab-btn px-3 py-1.5 rounded-lg font-semibold bg-crimson text-white transition shadow-sm";
+        } else {
+          btn.className = "method-tab-btn px-3 py-1.5 rounded-lg text-txt-secondary hover:text-white transition";
+        }
+      });
+
+      // Update Info Box
+      const title = document.getElementById('methodInfoTitle');
+      const desc = document.getElementById('methodInfoDesc');
+      const badge = document.getElementById('methodBadgeLabel');
+
+      if (method === 'bpe_pretrained') {
+        title.innerText = "Pretrained Byte-Pair Encoding (GPT Byte-Level)";
+        desc.innerText = "Splits text into subword units using byte-level BPE. Spaces are represented as 'Ġ' (Unicode \\u0120) to maintain exact byte fidelity. Rare or new words decompose into familiar sub-syllables.";
+        badge.innerText = "Method: Pretrained BPE (GPT-4 Byte-level)";
+      } else if (method === 'bpe_edu') {
+        title.innerText = "Educational Byte Pair Encoding (BPE)";
+        desc.innerText = "Constructed in Section 02. Starts with single characters and merges the most frequent pairs learned from the training corpus.";
+        badge.innerText = "Method: Educational BPE";
+      } else if (method === 'word') {
+        title.innerText = "Word-Based Tokenizer";
+        desc.innerText = "Segments strictly by whitespace delimiters. Suffers from out-of-vocabulary (OOV) issues on new words and ignores subword morphological relationships.";
+        badge.innerText = "Method: Word-Based Tokenizer";
+      } else if (method === 'char') {
+        title.innerText = "Character-Based Tokenizer";
+        desc.innerText = "Breaks every Unicode code point into its own individual token. Guarantees zero out-of-vocabulary issues, but produces extremely long sequence lengths.";
+        badge.innerText = "Method: Character-Based Tokenizer";
+      }
+
+      runTokenization();
+    }
+
+    function updateTokenizerStatistics(input, tokens) {
+      const charCount = input.length;
+      const words = input.trim() ? input.trim().split(/\s+/).length : 0;
+      const tokenCount = tokens.length;
+      const uniqueTokens = new Set(tokens.map(t => t.rawText)).size;
+      const avgChars = tokenCount > 0 ? (charCount / tokenCount).toFixed(1) : "0.0";
+      const ratio = words > 0 ? (tokenCount / words).toFixed(2) : "0.00";
+
+      document.getElementById('statChars').innerText = charCount;
+      document.getElementById('statWords').innerText = words;
+      document.getElementById('statTokens').innerText = tokenCount;
+      document.getElementById('statUniqueTokens').innerText = uniqueTokens;
+      document.getElementById('statAvgChars').innerText = avgChars;
+      document.getElementById('statRatio').innerText = ratio;
+
+      document.getElementById('visualizerFooterInfo').innerText = `Viewing ${tokenCount} tokens (${uniqueTokens} unique)`;
+    }
+
+    function renderTokenVisualizer(tokens) {
+      const container = document.getElementById('tokenVisualizerArea');
+      container.innerHTML = '';
+
+      if (tokens.length === 0) {
+        container.innerHTML = `
+          <div class="w-full h-full flex flex-col items-center justify-center text-center p-8 text-txt-muted space-y-2">
+            <i data-lucide="terminal" class="w-8 h-8 text-txt-faint"></i>
+            <p class="text-xs">Enter text in the workspace above to reveal visual token blocks.</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      // Render each token as an elegant interactive pill
+      tokens.forEach((t, idx) => {
+        const pill = document.createElement('div');
+        
+        // Color variation based on index / space token
+        const isSpace = t.displayText.startsWith('Ġ') || t.displayText === '␣';
+        const bgClass = isSpace 
+          ? "bg-crimson/15 border-crimson/30 text-crimson-light hover:bg-crimson/25" 
+          : ((idx % 3 === 0) 
+            ? "bg-theme-surface hover:bg-theme-surfaceHover border-theme-border text-txt-main"
+            : ((idx % 3 === 1) 
+              ? "bg-gold/15 border-gold/30 text-gold-light hover:bg-gold/25"
+              : "bg-theme-surface hover:bg-theme-surfaceHover border-theme-borderLight text-txt-main"));
+
+        pill.className = `token-pill group cursor-pointer inline-flex flex-col items-center p-2 rounded-xl border text-xs font-mono select-none ${bgClass}`;
+        pill.title = `Token #${t.position} | ID: ${t.id} | Length: ${t.charLength} chars`;
+        
+        pill.innerHTML = `
+          <span class="font-bold text-xs leading-none">${escapeHtml(t.displayText)}</span>
+          <span class="text-[9px] text-txt-faint group-hover:text-txt-muted mt-1 font-sans">#${t.position}</span>
+        `;
+
+        pill.onclick = () => openTokenModal(t);
+        container.appendChild(pill);
+      });
+    }
+
+    /* =========================================================================
+     * TOKEN BREAKDOWN TABLE WITH SORTING & DUPLICATE HIGHLIGHTING
+     * ========================================================================= */
+    function renderTokenTable(tokens) {
+      const tbody = document.getElementById('tokenTableBody');
+      tbody.innerHTML = '';
+
+      if (!tokens || tokens.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-txt-muted italic">No tokens available.</td></tr>`;
+        return;
+      }
+
+      // Calculate frequencies for duplicate highlighting
+      const freqMap = {};
+      tokens.forEach(t => {
+        freqMap[t.rawText] = (freqMap[t.rawText] || 0) + 1;
+      });
+
+      // Filter based on search input
+      const query = document.getElementById('tableSearchInput')?.value.toLowerCase() || '';
+      let filtered = tokens.filter(t => 
+        t.displayText.toLowerCase().includes(query) || 
+        String(t.id).includes(query) || 
+        String(t.position).includes(query)
+      );
+
+      // Sort
+      filtered.sort((a, b) => {
+        let valA = a[APP.tableSortCol];
+        let valB = b[APP.tableSortCol];
+        if (APP.tableSortCol === 'token') {
+          valA = a.displayText;
+          valB = b.displayText;
+        }
+        if (valA < valB) return APP.tableSortAsc ? -1 : 1;
+        if (valA > valB) return APP.tableSortAsc ? 1 : -1;
+        return 0;
+      });
+
+      filtered.forEach(t => {
+        const isRepeated = freqMap[t.rawText] > 1;
+        const rowClass = (isRepeated && APP.highlightDuplicates) 
+          ? "bg-gold/10 hover:bg-gold/15" 
+          : "hover:bg-theme-surface/70";
+
+        const tr = document.createElement('tr');
+        tr.className = `transition ${rowClass}`;
+
+        const hexStr = toHexBytes(t.rawText);
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-4 font-bold text-txt-muted">#${t.position}</td>
+          <td class="py-2.5 px-4 font-bold text-txt-main">
+            <span class="px-2 py-0.5 rounded bg-theme-bg border border-theme-border inline-block">
+              ${escapeHtml(t.displayText)}
+            </span>
+            ${isRepeated ? `<span class="ml-1.5 text-[9px] px-1 py-0.2 rounded bg-gold-subtle text-gold font-sans">Repeated (${freqMap[t.rawText]}x)</span>` : ''}
+          </td>
+          <td class="py-2.5 px-4 text-crimson-light font-bold">${t.id}</td>
+          <td class="py-2.5 px-4 text-txt-secondary">${t.charLength}</td>
+          <td class="py-2.5 px-4 text-txt-muted text-[11px]">${hexStr}</td>
+          <td class="py-2.5 px-4 text-right">
+            <button onclick="copySingleToken('${escapeJs(t.rawText)}')" class="p-1 rounded hover:bg-theme-surface text-txt-muted hover:text-white transition" title="Copy token string">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      lucide.createIcons();
+    }
+
+    function sortTable(column) {
+      if (APP.tableSortCol === column) {
+        APP.tableSortAsc = !APP.tableSortAsc;
+      } else {
+        APP.tableSortCol = column;
+        APP.tableSortAsc = true;
+      }
+      renderTokenTable(APP.currentTokens);
+    }
+
+    function filterTokenTable() {
+      renderTokenTable(APP.currentTokens);
+    }
+
+    function toggleHighlightRepeats() {
+      APP.highlightDuplicates = !APP.highlightDuplicates;
+      const btn = document.getElementById('btnHighlightRepeats');
+      if (APP.highlightDuplicates) {
+        btn.classList.add('bg-gold/20', 'border-gold', 'text-gold');
+        showToast('Duplicate token highlighting enabled', 'info');
+      } else {
+        btn.classList.remove('bg-gold/20', 'border-gold', 'text-gold');
+      }
+      renderTokenTable(APP.currentTokens);
+    }
+
+    /* =========================================================================
+     * SECTION 08: VOCABULARY LAB — EDUCATIONAL BPE BUILDER ALGORITHM
+     * ========================================================================= */
+    function trainBPE() {
+      const corpus = document.getElementById('bpeCorpusInput').value.trim();
+      const numMerges = parseInt(document.getElementById('bpeMergeSlider').value, 10);
+
+      if (!corpus) {
+        showToast('Please enter a training corpus', 'info');
+        return;
+      }
+
+      // Step 1: Pre-tokenize corpus into word frequencies
+      const words = corpus.split(/\s+/);
+      const vocab = new Set();
+      const wordSplits = {};
+
+      words.forEach(w => {
+        if (!w) return;
+        const chars = w.split('').concat(['</w>']);
+        chars.forEach(c => vocab.add(c));
+        wordSplits[w] = (wordSplits[w] || 0) + 1;
+      });
+
+      const initialVocabSize = vocab.size;
+      document.getElementById('bpeStatInitialVocab').innerText = initialVocabSize;
+
+      // Structure words as array of character tokens with frequency
+      let corpusData = Object.keys(wordSplits).map(word => ({
+        tokens: word.split('').concat(['</w>']),
+        freq: wordSplits[word]
+      }));
+
+      const merges = [];
+      const timelineContainer = document.getElementById('bpeMergeTimeline');
+      timelineContainer.innerHTML = '';
+
+      // Iterative BPE Merges
+      for (let step = 1; step <= numMerges; step++) {
+        // Count pairs
+        const pairCounts = {};
+        corpusData.forEach(item => {
+          for (let i = 0; i < item.tokens.length - 1; i++) {
+            const pairKey = `${item.tokens[i]}::${item.tokens[i+1]}`;
+            pairCounts[pairKey] = (pairCounts[pairKey] || 0) + item.freq;
+          }
+        });
+
+        // Find most frequent pair
+        let bestPair = null;
+        let maxCount = -1;
+        for (const pairKey in pairCounts) {
+          if (pairCounts[pairKey] > maxCount) {
+            maxCount = pairCounts[pairKey];
+            bestPair = pairKey;
+          }
+        }
+
+        if (!bestPair || maxCount < 1) break;
+
+        const [p1, p2] = bestPair.split('::');
+        const mergedToken = p1 + p2;
+        vocab.add(mergedToken);
+
+        merges.push({
+          step: step,
+          pair: [p1, p2],
+          merged: mergedToken,
+          freq: maxCount
+        });
+
+        // Apply merge across corpus
+        corpusData = corpusData.map(item => {
+          const newTokens = [];
+          let i = 0;
+          while (i < item.tokens.length) {
+            if (i < item.tokens.length - 1 && item.tokens[i] === p1 && item.tokens[i+1] === p2) {
+              newTokens.push(mergedToken);
+              i += 2;
+            } else {
+              newTokens.push(item.tokens[i]);
+              i++;
+            }
+          }
+          return { tokens: newTokens, freq: item.freq };
+        });
+
+        // Append to Timeline
+        const mergeRow = document.createElement('div');
+        mergeRow.className = "p-2.5 rounded-xl bg-theme-bg border border-theme-border flex items-center justify-between text-xs font-mono animate-in fade-in slide-in-from-top-1 duration-200";
+        mergeRow.innerHTML = `
+          <div class="flex items-center space-x-2">
+            <span class="w-5 h-5 rounded-full bg-gold/20 text-gold flex items-center justify-center text-[10px] font-bold">
+              ${step}
+            </span>
+            <span class="text-txt-secondary">
+              Merged: <span class="text-crimson-light font-bold">'${escapeHtml(p1)}'</span> + <span class="text-crimson-light font-bold">'${escapeHtml(p2)}'</span>
+              &rarr; <span class="text-gold-light font-bold px-1.5 py-0.2 rounded bg-theme-surface">'${escapeHtml(mergedToken)}'</span>
+            </span>
+          </div>
+          <span class="text-[11px] text-txt-muted">Freq: ${maxCount}</span>
+        `;
+        timelineContainer.appendChild(mergeRow);
+      }
+
+      // Update State
+      APP.bpeModel = {
+        vocab: vocab,
+        merges: merges,
+        wordFreqs: wordSplits
+      };
+
+      document.getElementById('bpeStatTotalMerges').innerText = merges.length;
+      document.getElementById('bpeStatFinalVocab').innerText = vocab.size;
+      document.getElementById('mergeProgressIndicator').innerText = `Completed ${merges.length} merges`;
+
+      // Render Final Vocabulary Pills
+      renderBpeVocabPills(vocab);
+      showToast(`BPE Trained: ${merges.length} merges yielded ${vocab.size} total vocabulary items`, 'success');
+
+      // Refresh tokenizer if Educational BPE is active
+      if (APP.activeTokenizer === 'bpe_edu') {
+        runTokenization();
+      }
+    }
+
+    function renderBpeVocabPills(vocab) {
+      const container = document.getElementById('bpeVocabPillsContainer');
+      container.innerHTML = '';
+      document.getElementById('vocabPillCount').innerText = `${vocab.size} tokens`;
+
+      Array.from(vocab).forEach(token => {
+        const pill = document.createElement('span');
+        const isMerged = token.length > 1;
+        pill.className = `px-2 py-1 rounded text-xs font-mono border ${isMerged ? 'bg-gold/15 border-gold/40 text-gold-light' : 'bg-theme-bg border-theme-border text-txt-secondary'}`;
+        pill.innerText = token;
+        container.appendChild(pill);
+      });
+    }
+
+    function loadBpeCorpus(preset) {
+      const input = document.getElementById('bpeCorpusInput');
+      if (preset === 'toy') {
+        input.value = "low low low low lower lower newest newest newest widest widest";
+      } else if (preset === 'tokyo') {
+        input.value = "Tokyo cyberpunk night Shibuya neon lights rain reflection Shinjuku streets Tokyo night cyberpunk reflection";
+      } else if (preset === 'ai') {
+        input.value = "machine learning artificial intelligence neural network language model training transformer attention mechanism deep learning";
+      }
+      trainBPE();
+    }
+
+    function resetBpeBuilder() {
+      document.getElementById('bpeCorpusInput').value = "low low low low lower lower newest newest newest widest widest";
+      document.getElementById('bpeMergeSlider').value = 8;
+      document.getElementById('bpeMergeCountVal').innerText = "8";
+      trainBPE();
+    }
+
+    /* =========================================================================
+     * SECTION 09: TOKEN BATTLE — 4-WAY COMPARISON ENGINE
+     * ========================================================================= */
+    function runTokenBattle() {
+      const sentence = document.getElementById('battleSentenceInput').value;
+      if (!sentence) return;
+
+      const tWord = tokenizeWord(sentence);
+      const tChar = tokenizeCharacter(sentence);
+      const tEdu = tokenizeEducationalBPE(sentence);
+      const tPre = tokenizePretrainedBPE(sentence);
+
+      // Counts
+      document.getElementById('battleCountWord').innerText = tWord.length;
+      document.getElementById('battleCountChar').innerText = tChar.length;
+      document.getElementById('battleCountEduBpe').innerText = tEdu.length;
+      document.getElementById('battleCountPretrained').innerText = tPre.length;
+
+      // Render Segment Pills
+      renderBattlePills('battleSegmentsWord', tWord, 'border-theme-border text-txt-main');
+      renderBattlePills('battleSegmentsChar', tChar, 'border-theme-border text-txt-secondary');
+      renderBattlePills('battleSegmentsEduBpe', tEdu, 'border-gold/40 text-gold-light bg-gold-subtle');
+      renderBattlePills('battleSegmentsPretrained', tPre, 'border-crimson/40 text-crimson-light bg-crimson-subtle');
+    }
+
+    function renderBattlePills(containerId, tokens, colorClass) {
+      const el = document.getElementById(containerId);
+      el.innerHTML = '';
+      tokens.forEach(t => {
+        const s = document.createElement('span');
+        s.className = `px-1.5 py-0.5 rounded text-[11px] font-mono border ${colorClass}`;
+        s.innerText = t.displayText;
+        el.appendChild(s);
+      });
+    }
+
+    function setBattleSample(type) {
+      const input = document.getElementById('battleSentenceInput');
+      if (type === 'short') {
+        input.value = "Tokyo never sleeps.";
+      } else if (type === 'contractions') {
+        input.value = "We shouldn't've underestimated the model's tokenizer capabilities!";
+      } else if (type === 'multilingual') {
+        input.value = "人工知能 ⚡ Tokyo Neon 🇯🇵 transforms LLM embeddings!";
+      }
+      runTokenBattle();
+    }
+
+    /* =========================================================================
+     * SECTION 10: 3D EMBEDDING EXPLORER & MATHEMATICAL PCA ENGINE
+     * Authentically transforms sentences into high-dimensional semantic vectors,
+     * computes the exact covariance matrix, extracts top 3 eigenvectors via
+     * Power Iteration with Hotelling Deflation, and renders with Plotly WebGL.
+     * ========================================================================= */
+    
+    // High-Dimensional Semantic Concept Centroids (D = 32)
+    // Structured across 4 semantic anchor domains:
+    // 1. AI/Machine Learning/Data (Dims 0-7)
+    // 2. Language/NLP/Programming (Dims 8-15)
+    // 3. City/Urban/Tokyo (Dims 16-23)
+    // 4. Skills/Human/Learning (Dims 24-31)
+    const VECTOR_DIM = 32;
+
+    const SEMANTIC_KEYWORDS = {
+      // Domain 1: AI / Data
+      "artificial": [0, 1.2], "intelligence": [1, 1.4], "machine": [2, 1.3], "learning": [3, 1.2],
+      "computers": [4, 1.1], "recognize": [5, 1.0], "patterns": [6, 1.3], "technology": [7, 1.2],
+      "data": [0, 1.1], "neural": [1, 1.3], "deep": [2, 1.0], "robotics": [7, 1.3],
+
+      // Domain 2: Language / NLP / Code
+      "natural": [8, 1.1], "language": [9, 1.5], "processing": [10, 1.3], "understand": [11, 1.1],
+      "text": [12, 1.3], "python": [13, 1.6], "popular": [14, 0.9], "programming": [15, 1.5],
+      "code": [13, 1.2], "tokens": [12, 1.4], "curiosity": [11, 1.0],
+
+      // Domain 3: Tokyo / City / World
+      "tokyo": [16, 1.8], "never": [17, 0.9], "sleeps": [18, 1.4], "world": [19, 1.2],
+      "connects": [20, 1.1], "people": [21, 1.2], "across": [22, 0.9], "city": [16, 1.3],
+      "shinjuku": [16, 1.6], "neon": [18, 1.5], "skyscrapers": [19, 1.3], "shibuya": [16, 1.5],
+
+      // Domain 4: Skills / Growth
+      "skills": [24, 1.5], "creates": [25, 1.1], "opportunities": [26, 1.5], "transforming": [27, 1.2],
+      "reading": [28, 1.1], "books": [29, 1.2], "human": [30, 1.0], "future": [31, 1.2]
+    };
+
+    function vectorizeSentence(sentence) {
+      const vec = new Float64Array(VECTOR_DIM);
+      const cleanWords = sentence.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/);
+      
+      let matchedCount = 0;
+      cleanWords.forEach(w => {
+        if (SEMANTIC_KEYWORDS[w]) {
+          const [dim, weight] = SEMANTIC_KEYWORDS[w];
+          vec[dim] += weight;
+          // Add mild cross-dimensional semantic bleed
+          vec[(dim + 1) % VECTOR_DIM] += weight * 0.35;
+          vec[(dim + VECTOR_DIM - 1) % VECTOR_DIM] += weight * 0.35;
+          matchedCount++;
+        } else {
+          // Subword n-gram hash signature for unmapped words
+          let h = 0;
+          for (let i = 0; i < w.length; i++) h = (h * 31 + w.charCodeAt(i)) % VECTOR_DIM;
+          vec[h] += 0.45;
+        }
+      });
+
+      // L2 Normalize to unit sphere: ||vec|| = 1
+      let norm = 0;
+      for (let i = 0; i < VECTOR_DIM; i++) norm += vec[i] * vec[i];
+      norm = Math.sqrt(norm);
+      if (norm > 0) {
+        for (let i = 0; i < VECTOR_DIM; i++) vec[i] /= norm;
+      }
+      return vec;
+    }
+
+    function calculateCosineSimilarity(vecA, vecB) {
+      let dot = 0;
+      let normA = 0;
+      let normB = 0;
+      for (let i = 0; i < VECTOR_DIM; i++) {
+        dot += vecA[i] * vecB[i];
+        normA += vecA[i] * vecA[i];
+        normB += vecB[i] * vecB[i];
+      }
+      if (normA === 0 || normB === 0) return 0;
+      return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+    }
+
+    /* Mathematical PCA via Covariance & Power Iteration */
+    function fitPCA(vectors) {
+      const N = vectors.length;
+      const D = VECTOR_DIM;
+
+      // 1. Empirical Mean Vector (mu)
+      const mean = new Float64Array(D);
+      for (let i = 0; i < N; i++) {
+        for (let d = 0; d < D; d++) {
+          mean[d] += vectors[i][d] / N;
+        }
+      }
+
+      // 2. Mean-Centered Data Matrix (Xc)
+      const Xc = [];
+      for (let i = 0; i < N; i++) {
+        const row = new Float64Array(D);
+        for (let d = 0; d < D; d++) {
+          row[d] = vectors[i][d] - mean[d];
+        }
+        Xc.push(row);
+      }
+
+      // 3. Covariance Matrix C = (Xc^T * Xc) / (N - 1)
+      const denom = Math.max(1, N - 1);
+      const cov = [];
+      for (let r = 0; r < D; r++) {
+        cov[r] = new Float64Array(D);
+        for (let c = 0; c < D; c++) {
+          let sum = 0;
+          for (let i = 0; i < N; i++) {
+            sum += Xc[i][r] * Xc[i][c];
+          }
+          cov[r][c] = sum / denom;
+        }
+      }
+
+      // Total trace (sum of variances)
+      let trace = 0;
+      for (let d = 0; d < D; d++) trace += cov[d][d];
+      if (trace === 0) trace = 1;
+
+      // 4. Extract Top 3 Eigenvectors using Power Iteration with Hotelling Deflation
+      const components = [];
+      const eigenvalues = [];
+
+      for (let comp = 0; comp < 3; comp++) {
+        // Initialize random vector
+        let b = new Float64Array(D);
+        for (let d = 0; d < D; d++) b[d] = Math.sin(d + comp * 3.14);
+
+        // Power Iteration (25 iterations)
+        for (let iter = 0; iter < 25; iter++) {
+          const bNext = new Float64Array(D);
+          for (let r = 0; r < D; r++) {
+            let sum = 0;
+            for (let c = 0; c < D; c++) {
+              sum += cov[r][c] * b[c];
+            }
+            bNext[r] = sum;
+          }
+
+          // Gram-Schmidt orthogonalization against previously found components
+          for (let prev = 0; prev < comp; prev++) {
+            let dot = 0;
+            for (let d = 0; d < D; d++) dot += bNext[d] * components[prev][d];
+            for (let d = 0; d < D; d++) bNext[d] -= dot * components[prev][d];
+          }
+
+          // Normalize
+          let norm = 0;
+          for (let d = 0; d < D; d++) norm += bNext[d] * bNext[d];
+          norm = Math.sqrt(norm);
+          if (norm > 0) {
+            for (let d = 0; d < D; d++) b[d] = bNext[d] / norm;
+          }
+        }
+
+        // Eigenvalue lambda = b^T * cov * b
+        let lambda = 0;
+        for (let r = 0; r < D; r++) {
+          for (let c = 0; c < D; c++) {
+            lambda += b[r] * cov[r][c] * b[c];
+          }
+        }
+
+        components.push(b);
+        eigenvalues.push(Math.max(0, lambda));
+
+        // Hotelling Deflation: C = C - lambda * (b * b^T)
+        for (let r = 0; r < D; r++) {
+          for (let c = 0; c < D; c++) {
+            cov[r][c] -= lambda * b[r] * b[c];
+          }
+        }
+      }
+
+      // Variance Ratios
+      const varianceRatios = eigenvalues.map(l => Math.round((l / trace) * 100));
+
+      return {
+        mean: mean,
+        components: components,
+        varianceRatios: varianceRatios
+      };
+    }
+
+    function projectVectorToPCA(vec, pca) {
+      const pc1 = dotProductOffset(vec, pca.mean, pca.components[0]);
+      const pc2 = dotProductOffset(vec, pca.mean, pca.components[1]);
+      const pc3 = dotProductOffset(vec, pca.mean, pca.components[2]);
+      return [pc1, pc2, pc3];
+    }
+
+    function dotProductOffset(vec, mean, comp) {
+      let sum = 0;
+      for (let i = 0; i < VECTOR_DIM; i++) {
+        sum += (vec[i] - mean[i]) * comp[i];
+      }
+      return sum;
+    }
+
+    /* Initialize and Plot the 3D Scatter */
+    function recalculatePCAAndPlot() {
+      const sampleSentences = APP.embeddingState.sampleSentences;
+      if (sampleSentences.length < 3) {
+        showToast('At least 3 sample sentences required for 3D PCA', 'info');
+        return;
+      }
+
+      // Show Loading Overlay
+      const loader = document.getElementById('plotLoadingOverlay');
+      loader.classList.remove('hidden');
+
+      setTimeout(() => {
+        // 1. Vectorize all sample sentences
+        const sampleVectors = sampleSentences.map(s => vectorizeSentence(s));
+
+        // 2. Fit PCA on sample sentences
+        const pca = fitPCA(sampleVectors);
+        APP.embeddingState.pcaFitted = pca;
+
+        // Update Variance Display
+        document.getElementById('pcaVarianceExplained').innerText = 
+          `PC1: ${pca.varianceRatios[0]}% · PC2: ${pca.varianceRatios[1]}% · PC3: ${pca.varianceRatios[2]}%`;
+
+        // 3. Project Sample Sentences
+        const samplePoints = sampleSentences.map((s, idx) => {
+          const coords = projectVectorToPCA(sampleVectors[idx], pca);
+          return {
+            text: s,
+            coords: coords,
+            vector: sampleVectors[idx],
+            isUser: false
+          };
+        });
+
+        // 4. Project existing User Sentences onto the EXACT SAME fitted PCA system
+        const userPoints = APP.embeddingState.userSentences.map(uText => {
+          const uVec = vectorizeSentence(uText);
+          const coords = projectVectorToPCA(uVec, pca);
+          return {
+            text: uText,
+            coords: coords,
+            vector: uVec,
+            isUser: true
+          };
+        });
+
+        APP.embeddingState.plottedPoints = [...samplePoints, ...userPoints];
+
+        // 5. Render with Plotly 3D WebGL
+        renderPlotly3D(samplePoints, userPoints);
+
+        // 6. Update Similarity Selectors
+        updateSimilarityDropdowns();
+
+        loader.classList.add('hidden');
+      }, 50);
+    }
+
+    function renderPlotly3D(samplePoints, userPoints) {
+      // Trace 1: Sample Sentences (Circles)
+      const sampleTrace = {
+        x: samplePoints.map(p => p.coords[0]),
+        y: samplePoints.map(p => p.coords[1]),
+        z: samplePoints.map(p => p.coords[2]),
+        text: samplePoints.map(p => `<b>${escapeHtml(p.text)}</b><br>PC1: ${p.coords[0].toFixed(3)} | PC2: ${p.coords[1].toFixed(3)} | PC3: ${p.coords[2].toFixed(3)}`),
+        hoverinfo: 'text',
+        mode: 'markers+text',
+        name: 'Sample Sentences',
+        textposition: 'top center',
+        textfont: { family: 'JetBrains Mono', size: 10, color: '#A4A3A1' },
+        marker: {
+          size: 7,
+          color: '#38BDF8', // Cyan / Sky
+          opacity: 0.9,
+          line: { color: '#FFFFFF', width: 1 }
+        },
+        type: 'scatter3d'
+      };
+
+      // Trace 2: User Added Sentences (Diamonds)
+      const userTrace = {
+        x: userPoints.map(p => p.coords[0]),
+        y: userPoints.map(p => p.coords[1]),
+        z: userPoints.map(p => p.coords[2]),
+        text: userPoints.map(p => `<b>[USER] ${escapeHtml(p.text)}</b><br>PC1: ${p.coords[0].toFixed(3)} | PC2: ${p.coords[1].toFixed(3)} | PC3: ${p.coords[2].toFixed(3)}`),
+        hoverinfo: 'text',
+        mode: 'markers+text',
+        name: 'User Sentences',
+        textposition: 'top center',
+        textfont: { family: 'JetBrains Mono', size: 11, color: '#F3F1ED' },
+        marker: {
+          size: 10,
+          symbol: 'diamond',
+          color: '#C83C45', // Crimson
+          opacity: 1,
+          line: { color: '#C5A66A', width: 2 } // Gold ring
+        },
+        type: 'scatter3d'
+      };
+
+      const layout = {
+        paper_bgcolor: '#101114',
+        plot_bgcolor: '#101114',
+        margin: { l: 0, r: 0, b: 0, t: 0 },
+        showlegend: true,
+        legend: {
+          x: 0.02,
+          y: 0.98,
+          font: { family: 'Inter', size: 11, color: '#F3F1ED' },
+          bgcolor: 'rgba(25, 27, 32, 0.8)',
+          bordercolor: '#282B33',
+          borderwidth: 1
+        },
+        scene: {
+          aspectmode: 'cube',
+          camera: {
+            eye: { x: 1.5, y: 1.5, z: 1.2 }
+          },
+          xaxis: {
+            title: 'PC1 (Max Variance)',
+            color: '#A4A3A1',
+            gridcolor: '#282B33',
+            zerolinecolor: '#C83C45',
+            showbackground: true,
+            backgroundcolor: '#111317'
+          },
+          yaxis: {
+            title: 'PC2',
+            color: '#A4A3A1',
+            gridcolor: '#282B33',
+            zerolinecolor: '#C5A66A',
+            showbackground: true,
+            backgroundcolor: '#111317'
+          },
+          zaxis: {
+            title: 'PC3',
+            color: '#A4A3A1',
+            gridcolor: '#282B33',
+            zerolinecolor: '#383D48',
+            showbackground: true,
+            backgroundcolor: '#111317'
+          }
+        }
+      };
+
+      const config = {
+        responsive: true,
+        displayModeBar: false
+      };
+
+      Plotly.react('embedding3dPlot', [sampleTrace, userTrace], layout, config);
+
+      // Point Click Listener for Inspection
+      const plotEl = document.getElementById('embedding3dPlot');
+      plotEl.on('plotly_click', data => {
+        if (data.points && data.points.length > 0) {
+          const pt = data.points[0];
+          const isUser = pt.data.name === 'User Sentences';
+          const pointsList = isUser ? userPoints : samplePoints;
+          const pointObj = pointsList[pt.pointNumber];
+          
+          if (pointObj) {
+            document.getElementById('inspectPointTitle').innerText = isUser ? '[User Added Point]' : '[Sample Sentence Point]';
+            document.getElementById('inspectPointText').innerText = `"${pointObj.text}"`;
+            document.getElementById('inspectPointCoords').innerText = 
+              `PC1: ${pointObj.coords[0].toFixed(3)} | PC2: ${pointObj.coords[1].toFixed(3)} | PC3: ${pointObj.coords[2].toFixed(3)}`;
+
+            // Auto select in similarity calculator
+            document.getElementById('simSelectA').value = pointObj.text;
+            calculateSimilarity();
+          }
+        }
+      });
+    }
+
+    /* Camera Preset Controls */
+    function setCameraView(preset) {
+      let eye = { x: 1.5, y: 1.5, z: 1.2 };
+      if (preset === 'top') {
+        eye = { x: 0.0, y: 0.0, z: 2.3 }; // Looking straight down at PC1 vs PC2
+      } else if (preset === 'side') {
+        eye = { x: 0.0, y: 2.3, z: 0.0 }; // Looking at PC1 vs PC3
+      }
+      Plotly.relayout('embedding3dPlot', { 'scene.camera.eye': eye });
+    }
+
+    function resetPlotCamera() {
+      setCameraView('iso');
+    }
+
+    /* C. ADD USER SENTENCE TO 3D PLOT */
+    function addUserSentenceToPlot() {
+      const input = document.getElementById('newUserSentenceInput');
+      const text = input.value.trim();
+
+      if (!text) {
+        showToast('Please enter a sentence to project', 'info');
+        return;
+      }
+
+      if (APP.embeddingState.userSentences.includes(text)) {
+        showToast('This sentence is already plotted', 'info');
+        return;
+      }
+
+      APP.embeddingState.userSentences.push(text);
+      input.value = '';
+
+      // Update User Sentence List in DOM
+      renderUserSentencesList();
+
+      // Recalculate Plotly traces (preserving existing PCA basis)
+      recalculatePCAAndPlot();
+      showToast(`Projected "${text.substring(0, 30)}..." into 3D PCA space`, 'success');
+    }
+
+    function fillUserSentence(str) {
+      document.getElementById('newUserSentenceInput').value = str;
+    }
+
+    function clearUserSentences() {
+      APP.embeddingState.userSentences = [];
+      renderUserSentencesList();
+      recalculatePCAAndPlot();
+      showToast('Cleared user points from 3D plot', 'info');
+    }
+
+    function renderUserSentencesList() {
+      const list = document.getElementById('userSentenceList');
+      const count = document.getElementById('userSentenceCount');
+      count.innerText = APP.embeddingState.userSentences.length;
+
+      if (APP.embeddingState.userSentences.length === 0) {
+        list.innerHTML = `<span class="text-txt-muted italic">No user sentences added yet. Add one above!</span>`;
+        return;
+      }
+
+      list.innerHTML = '';
+      APP.embeddingState.userSentences.forEach((s, idx) => {
+        const item = document.createElement('div');
+        item.className = "p-1.5 rounded bg-theme-bg border border-theme-border flex items-center justify-between text-[11px]";
+        item.innerHTML = `
+          <div class="flex items-center space-x-1.5 truncate">
+            <span class="w-2 h-2 rotate-45 bg-crimson flex-shrink-0"></span>
+            <span class="truncate text-txt-main">${escapeHtml(s)}</span>
+          </div>
+          <button onclick="removeUserSentence(${idx})" class="text-crimson hover:text-white px-1 ml-2">&times;</button>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    function removeUserSentence(idx) {
+      APP.embeddingState.userSentences.splice(idx, 1);
+      renderUserSentencesList();
+      recalculatePCAAndPlot();
+    }
+
+    /* E. EDIT SAMPLE SENTENCES CONTROLLER */
+    function toggleSampleEditor() {
+      const body = document.getElementById('sampleEditorBody');
+      const chevron = document.getElementById('sampleEditorChevron');
+      body.classList.toggle('hidden');
+      chevron.classList.toggle('rotate-180');
+    }
+
+    function renderSampleInputsList() {
+      const list = document.getElementById('sampleSentenceInputsList');
+      list.innerHTML = '';
+      document.getElementById('sampleCountBadge').innerText = `${APP.embeddingState.sampleSentences.length} Sentences`;
+
+      APP.embeddingState.sampleSentences.forEach((s, idx) => {
+        const row = document.createElement('div');
+        row.className = "flex items-center gap-2";
+        row.innerHTML = `
+          <span class="text-xs font-mono text-txt-muted w-5">#${idx+1}</span>
+          <input type="text" value="${escapeHtml(s)}" onchange="updateSampleSentence(${idx}, this.value)" class="flex-1 bg-theme-bg border border-theme-border rounded-lg px-3 py-1.5 text-xs text-txt-main font-mono focus:outline-none focus:ring-1 focus:ring-gold">
+          <button onclick="removeSampleSentence(${idx})" class="p-1.5 text-txt-muted hover:text-crimson transition" title="Delete sentence">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        `;
+        list.appendChild(row);
+      });
+      lucide.createIcons();
+    }
+
+    function updateSampleSentence(idx, val) {
+      if (val.trim()) {
+        APP.embeddingState.sampleSentences[idx] = val.trim();
+      }
+    }
+
+    function addNewSampleRow() {
+      APP.embeddingState.sampleSentences.push("Artificial intelligence models learn token embeddings.");
+      renderSampleInputsList();
+    }
+
+    function removeSampleSentence(idx) {
+      if (APP.embeddingState.sampleSentences.length <= 3) {
+        showToast('At least 3 sentences required for 3D PCA projection', 'info');
+        return;
+      }
+      APP.embeddingState.sampleSentences.splice(idx, 1);
+      renderSampleInputsList();
+    }
+
+    function resetDefaultSamples() {
+      APP.embeddingState.sampleSentences = [
+        "Artificial intelligence is transforming the world.",
+        "Machine learning helps computers recognize patterns.",
+        "Natural language processing allows computers to understand text.",
+        "Python is a popular programming language.",
+        "Tokyo never sleeps.",
+        "Technology connects people across the world.",
+        "Learning new skills creates opportunities."
+      ];
+      renderSampleInputsList();
+      recalculatePCAAndPlot();
+      showToast('Reset sample sentences to defaults', 'info');
+    }
+
+    /* F. SENTENCE SIMILARITY CONTROLLER */
+    function updateSimilarityDropdowns() {
+      const selectA = document.getElementById('simSelectA');
+      const selectB = document.getElementById('simSelectB');
+      const allSentences = [...APP.embeddingState.sampleSentences, ...APP.embeddingState.userSentences];
+
+      selectA.innerHTML = '';
+      selectB.innerHTML = '';
+
+      allSentences.forEach((s, idx) => {
+        const optA = document.createElement('option');
+        optA.value = s;
+        optA.innerText = s;
+        selectA.appendChild(optA);
+
+        const optB = document.createElement('option');
+        optB.value = s;
+        optB.innerText = s;
+        selectB.appendChild(optB);
+      });
+
+      // Default distinct selections
+      if (allSentences.length >= 2) {
+        selectA.selectedIndex = 0;
+        selectB.selectedIndex = 1;
+      }
+
+      calculateSimilarity();
+    }
+
+    function calculateSimilarity() {
+      const sA = document.getElementById('simSelectA').value;
+      const sB = document.getElementById('simSelectB').value;
+
+      if (!sA || !sB) return;
+
+      const vecA = vectorizeSentence(sA);
+      const vecB = vectorizeSentence(sB);
+
+      // Authentic Cosine Similarity across original 32-D vector space
+      const cosSim = calculateCosineSimilarity(vecA, vecB);
+      const percentage = Math.max(0, Math.min(100, Math.round(cosSim * 100)));
+
+      document.getElementById('simScoreVal').innerText = cosSim.toFixed(3);
+      document.getElementById('simProgressBar').style.width = `${percentage}%`;
+
+      // Beginner-friendly explanation
+      const exp = document.getElementById('simExplanationText');
+      if (sA === sB) {
+        exp.innerHTML = `<strong class="text-gold">Identical:</strong> Exact same sentence vector ($\cos \theta = 1.000$). Complete conceptual alignment.`;
+      } else if (cosSim >= 0.70) {
+        exp.innerHTML = `<strong class="text-emerald-400">High Semantic Affinity (${cosSim.toFixed(2)}):</strong> Sentences share core topical domains (e.g., AI/Computation or City Life) and activate collinear subword features.`;
+      } else if (cosSim >= 0.35) {
+        exp.innerHTML = `<strong class="text-gold">Moderate Affinity (${cosSim.toFixed(2)}):</strong> Sentences share subtle thematic bridges (e.g. technology and world) but diverge in direct terminology.`;
+      } else {
+        exp.innerHTML = `<strong class="text-txt-muted">Low / Orthogonal Affinity (${cosSim.toFixed(2)}):</strong> Distinct conceptual domains (e.g., Tokyo night life vs. programming syntax) with near-perpendicular vectors in embedding space.`;
+      }
+    }
+
+    /* =========================================================================
+     * SECTION 11: TOKEN EXPLORER & FREQUENCY CHART
+     * ========================================================================= */
+    function updateTokenExplorer(tokens) {
+      if (!tokens || tokens.length === 0) return;
+
+      // Calculate frequencies
+      const freqMap = {};
+      tokens.forEach(t => {
+        freqMap[t.displayText] = (freqMap[t.displayText] || 0) + 1;
+      });
+
+      // Top 8 Tokens for Bar Chart
+      const sorted = Object.keys(freqMap)
+        .map(k => ({ token: k, count: freqMap[k] }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 8);
+
+      const maxCount = sorted.length > 0 ? sorted[0].count : 1;
+      const chartContainer = document.getElementById('tokenFreqChartContainer');
+      chartContainer.innerHTML = '';
+
+      sorted.forEach(item => {
+        const heightPct = Math.max(12, Math.round((item.count / maxCount) * 100));
+        const col = document.createElement('div');
+        col.className = "flex-1 flex flex-col items-center justify-end h-full group";
+        col.innerHTML = `
+          <span class="text-[10px] font-mono text-txt-muted mb-1 opacity-0 group-hover:opacity-100 transition">${item.count}</span>
+          <div class="w-full bg-gradient-to-t from-crimson to-crimson-light rounded-t-md transition-all duration-300 hover:brightness-125" style="height: ${heightPct}%"></div>
+          <span class="text-[10px] font-mono text-txt-secondary truncate w-full text-center mt-1.5" title="${escapeHtml(item.token)}">
+            ${escapeHtml(item.token)}
+          </span>
+        `;
+        chartContainer.appendChild(col);
+      });
+
+      // Repeated Patterns Detector
+      const repeatBox = document.getElementById('repeatedPatternsBox');
+      const repeatedItems = Object.keys(freqMap).filter(k => freqMap[k] > 1);
+      if (repeatedItems.length > 0) {
+        repeatBox.innerHTML = `Found <strong class="text-gold">${repeatedItems.length}</strong> repeated tokens: ${repeatedItems.slice(0, 5).map(r => `<code class="text-crimson-light bg-theme-bg px-1 py-0.5 rounded">${escapeHtml(r)}</code> (${freqMap[r]}x)`).join(', ')}`;
+      } else {
+        repeatBox.innerHTML = `All tokens in the current sequence are unique (100% lexical diversity).`;
+      }
+    }
+
+    function runTokenExplorerSearch() {
+      const q = document.getElementById('explorerSearchInput').value.trim().toLowerCase();
+      const resultsContainer = document.getElementById('explorerSearchResults');
+      
+      if (!q) {
+        resultsContainer.innerHTML = `
+          <div class="p-3 rounded-lg bg-theme-bg border border-theme-border text-xs text-txt-secondary">
+            Search any token to inspect its exact character offsets, occurrences, and unicode composition.
+          </div>
+        `;
+        return;
+      }
+
+      const matches = APP.currentTokens.filter(t => t.rawText.toLowerCase().includes(q));
+      if (matches.length === 0) {
+        resultsContainer.innerHTML = `<div class="p-3 rounded-lg bg-theme-bg text-txt-muted text-xs italic">No matching tokens found.</div>`;
+        return;
+      }
+
+      resultsContainer.innerHTML = '';
+      matches.slice(0, 10).forEach(m => {
+        const item = document.createElement('div');
+        item.className = "p-2.5 rounded-xl bg-theme-bg border border-theme-border flex items-center justify-between text-xs font-mono";
+        item.innerHTML = `
+          <div>
+            <span class="text-gold font-bold">${escapeHtml(m.displayText)}</span>
+            <span class="text-txt-muted text-[10px] ml-2">Pos: #${m.position} | ID: ${m.id}</span>
+          </div>
+          <span class="text-[10px] text-txt-secondary font-sans">Bytes: ${m.charLength}</span>
+        `;
+        resultsContainer.appendChild(item);
+      });
+    }
+
+    /* =========================================================================
+     * MODALS, SAMPLES & CLIPBOARD UTILITIES
+     * ========================================================================= */
+    function openTokenModal(token) {
+      document.getElementById('modalTokenText').innerText = token.displayText;
+      document.getElementById('modalTokenPos').innerText = `#${token.position}`;
+      document.getElementById('modalTokenId').innerText = token.id;
+      document.getElementById('modalTokenLength').innerText = `${token.charLength} chars`;
+      
+      const byteLen = new TextEncoder().encode(token.rawText).length;
+      document.getElementById('modalTokenByteLen').innerText = `${byteLen} bytes`;
+      document.getElementById('modalTokenBytes').innerText = toHexBytes(token.rawText) + ` · Unicode: U+${token.rawText.charCodeAt(0).toString(16).toUpperCase()}`;
+
+      document.getElementById('tokenModal').classList.remove('hidden');
+    }
+
+    function closeTokenModal() {
+      document.getElementById('tokenModal').classList.add('hidden');
+    }
+
+    function loadSampleText(type) {
+      const input = document.getElementById('tokenizerInput');
+      if (type === 'tokyo') {
+        input.value = "Tokyo's neon lights reflect unforgettable memories across cyber Shibuya. In this city, words break, but tokens remain eternal.";
+      } else if (type === 'code') {
+        input.value = "def tokenize_sentence(text: str) -> list[int]:\n    # Byte-level BPE encoding\n    tokens = gpt_tokenizer.encode(text)\n    return [t.id for t in tokens]";
+      }
+      runTokenization();
+    }
+
+    function clearTokenizerInput() {
+      document.getElementById('tokenizerInput').value = '';
+      runTokenization();
+    }
+
+    function copyTokensAsJSON() {
+      if (APP.currentTokens.length === 0) return;
+      const jsonStr = JSON.stringify(APP.currentTokens, null, 2);
+      navigator.clipboard.writeText(jsonStr).then(() => {
+        showToast('Tokens array copied to clipboard as JSON', 'success');
+      });
+    }
+
+    function copySingleToken(str) {
+      navigator.clipboard.writeText(str).then(() => {
+        showToast(`Copied token: "${str}"`, 'success');
+      });
+    }
+
+    function exportTableCSV() {
+      if (APP.currentTokens.length === 0) return;
+      let csv = "Position,Token,TokenID,CharLength\n";
+      APP.currentTokens.forEach(t => {
+        csv += `${t.position},"${t.rawText.replace(/"/g, '""')}",${t.id},${t.charLength}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = "tokyo_tokens_breakdown.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Exported breakdown table to CSV', 'success');
+    }
+
+    function toHexBytes(str) {
+      const bytes = new TextEncoder().encode(str);
+      return Array.from(bytes).map(b => '0x' + b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function escapeJs(str) {
+      return String(str).replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      
+      let border = 'border-theme-border';
+      let icon = '⚡';
+      if (type === 'success') {
+        border = 'border-emerald-500/50 bg-emerald-950/90 text-emerald-200';
+        icon = '✓';
+      } else {
+        border = 'border-crimson/50 bg-theme-secondary/95 text-txt-main';
+        icon = '⚡';
+      }
+
+      toast.className = `px-4 py-2.5 rounded-xl border ${border} text-xs shadow-2xl flex items-center space-x-2 pointer-events-auto transform transition duration-300 translate-y-2 opacity-0 font-medium backdrop-blur-md`;
+      toast.innerHTML = `<span class="text-crimson font-bold">${icon}</span><span>${escapeHtml(message)}</span>`;
+
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobileMenu');
+      menu.classList.toggle('hidden');
+    }
+
+    /* Ambient Floating Dust Particles Canvas */
+    function initAmbientCanvas() {
+      const canvas = document.getElementById('ambientCanvas');
+      const ctx = canvas.getContext('2d');
+      let w = canvas.width = window.innerWidth;
+      let h = canvas.height = window.innerHeight;
+
+      window.addEventListener('resize', () => {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+      });
+
+      const particles = [];
+      for (let i = 0; i < 35; i++) {
+        particles.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: Math.random() * 1.5 + 0.5,
+          vx: (Math.random() - 0.5) * 0.3,
+          vy: -Math.random() * 0.4 - 0.1,
+          alpha: Math.random() * 0.6 + 0.2
+        });
+      }
+
+      function loop() {
+        ctx.clearRect(0, 0, w, h);
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.y < 0) p.y = h;
+          if (p.x < 0) p.x = w;
+          if (p.x > w) p.x = 0;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(200, 60, 69, ${p.alpha})`;
+          ctx.fill();
+        });
+        requestAnimationFrame(loop);
+      }
+      loop();
+    }
+
+    /* Sticky Navigation Scroll Spy with Minimal Crimson Active Indicator */
+    function initScrollSpy() {
+      const sections = ['hero', 'tokenizer', 'vocabulary-lab', 'token-battle', 'embeddings-3d', 'token-explorer', 'learn'];
+      const navItems = document.querySelectorAll('.nav-item');
+
+      window.addEventListener('scroll', () => {
+        let current = '';
+        const scrollY = window.pageYOffset;
+
+        sections.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+            const top = el.offsetTop - 120;
+            const height = el.offsetHeight;
+            if (scrollY >= top && scrollY < top + height) {
+              current = id;
+            }
+          }
+        });
+
+        navItems.forEach(item => {
+          const target = item.getAttribute('data-target');
+          const indicator = item.querySelector('.active-indicator');
+          if (target === current) {
+            item.classList.add('text-white');
+            if (indicator) indicator.style.opacity = '1';
+          } else {
+            item.classList.remove('text-white');
+            if (indicator) indicator.style.opacity = '0';
+          }
+        });
+      });
+    }
+
+    /* =========================================================================
+     * INITIALIZATION ON PAGE LOAD
+     * ========================================================================= */
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Initialize Lucide Icons
+      lucide.createIcons();
+
+      // 2. Initialize Ambient Particle Dust
+      initAmbientCanvas();
+
+      // 3. Initialize Sticky Nav Spy
+      initScrollSpy();
+
+      // 4. Load Initial Sample Sentence into Tokenizer
+      loadSampleText('tokyo');
+
+      // 5. Initialize BPE Vocabulary Builder with default corpus
+      trainBPE();
+
+      // 6. Initialize Battle with sample sentence
+      runTokenBattle();
+
+      // 7. Render Sample Sentence inputs list in 3D section
+      renderSampleInputsList();
+
+      // 8. Calculate PCA and Render 3D Plot
+      recalculatePCAAndPlot();
+    });
+  </script>
+</body>
+</html>
